@@ -29,7 +29,7 @@
     // TV's current IP and loopback too, and keeps whichever answers.
     var BASE = 'http://127.0.0.1:8077';
     var KOFI = 'https://ko-fi.com/patrickst';
-    var VERSION = '0.3.8-qh2';
+    var VERSION = '0.3.8-qh3';
     var KEY = { LEFT: 37, UP: 38, RIGHT: 39, DOWN: 40, ENTER: 13, RETURN: 10009, ESC: 27, BACK: 8 };
 
     // What the manifest providers are called; resolved.json carries only their ids.
@@ -246,7 +246,7 @@
                     if (e.adult) x.adult = true;
                     var root = (e.flags || []).indexOf('root') >= 0;
                     if (root) x.root = true;
-                    if (p.id === 'qhsamsung-personal') v.needsHead = 'is a personal package: download it from GitHub on an authorized PC and install with Apps2Samsung';
+                    if (p.id === 'qhsamsung-personal' && e.private_download) v.needsHead = 'is hosted in a private repository and needs an authorized PC';
                     else if (root) v.needsHead = 'gains root on the TV and needs Host PC IP changed afterwards';
                     else if (e.user_settings) v.needsHead = 'asks for settings before it installs';
                     else if (HEAD_ONLY.test(e.file)) v.needsHead = 'is configured by Apps2Samsung while it installs';

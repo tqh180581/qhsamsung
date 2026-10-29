@@ -18,6 +18,7 @@ var signer = require('./signer.js');
 var zip = require('./zip.js');
 var catalogTrust = require('./catalog.js');
 var CATALOG_KEY = require('./catalog-key.js');
+var personalCatalog = require('./personal.js');
 
 var PORT = 8077;
 // Signed by the Apps2Samsung catalog workflow; see catalog.js for why the content is checked
@@ -200,10 +201,20 @@ function withCatalog(cb, fresh) {
     CATALOG_WAITING = [cb];
     function done(err, cat) { var w = CATALOG_WAITING; CATALOG_WAITING = null; w.forEach(function (f) { f(err, cat); }); }
     get(CATALOG_URL, function (err, buf) {
-        if (err) return done(err);
+        if (err) {
+            // An unavailable upstream never authorizes arbitrary downloads. Only the exact
+            // personal packages pinned in this signed application remain available.
+            var local;
+            try { local = personalCatalog.merge(null); } catch (e) { return done(e); }
+            local.at = Date.now(); CATALOG = local;
+            log('catalog: upstream unavailable; using bundled personal packages only');
+            return done(null, local);
+        }
         var cat;
         try { cat = catalogTrust.verify(buf, CATALOG_KEY); }
         catch (e) { log('catalog: ' + e.message); return done(e); }
+        try { cat = personalCatalog.merge(cat); }
+        catch (e) { return done(e); }
         cat.at = Date.now(); CATALOG = cat;
         log('catalog: signature ok, generated ' + cat.catalog.generatedAt + ', ' + Object.keys(cat.index).length + ' files');
         done(null, cat);

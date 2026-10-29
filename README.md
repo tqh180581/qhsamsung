@@ -6,7 +6,7 @@ Kho ứng dụng cá nhân cho TV Samsung Tizen. Chủ tài khoản dự kiến:
 
 - Tên hiển thị **QHSamsung · Personal Store**.
 - Danh sách từ kho Apps2Samsung/tizen-community-packages: **119 nhóm ứng dụng, 148 gói/biến thể**, bản `community-743`. Xem [danh sách ứng dụng](catalog/APPS.md).
-- App cá nhân **Kosovo SamsungTV 0.7.6** đã thêm vào [danh sách riêng](catalog/PERSONAL-APPS.md). Bản `0.3.8-qh2` hiển thị app trên TV với nhãn Phone or PC vì tệp GitHub vẫn riêng tư; chưa hỗ trợ cài trực tiếp gói riêng tư từ TV.
+- App cá nhân **Kosovo SamsungTV 0.7.6** ở **IPTV & Live TV**. Bản `0.3.8-qh3` cho phép cài trực tiếp từ TV, với URL và SHA-256 được ghim trong gói QHSamsung đã ký. Xem [danh sách cá nhân](catalog/PERSONAL-APPS.md).
 - Mã giao diện và dịch vụ tải, xác thực, ký, cài ứng dụng từ TV-Store 0.3.8.
 - Các mô-đun dịch vụ có thể chỉnh sửa trong `service-src/`.
 - Đóng gói `.wgt` trên Windows bằng `scripts/build.ps1` (cần Node.js).

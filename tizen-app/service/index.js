@@ -571,6 +571,41 @@ module.exports = [
 
 
 };
+defs["./personal-catalog.js"] = function (module,exports,require) {
+'use strict';
+module.exports = {"id":"qhsamsung-personal","ok":true,"url":"https://api.github.com/repos/tqh180581/qhsamsung/releases","latestTag":"movies-v0.7.6","catalog":{"apps":[{"name":"Kosovo SamsungTV","group":"Kosovo SamsungTV","file":"Kosovo-SamsungTV-v0.7.6.wgt","version":"0.7.6","category":"iptv","description":"KOSOVO PANEL dành cho Samsung Tizen 5.0 trở lên. Chọn Install để tải và cài trên TV. Cần tài khoản dịch vụ riêng.","repo":"tqh180581/qhsamsung","app_id":"KsvTv2019A.KosovoTV","package_id":"KsvTv2019A","min_tizen_version":"5.0","private_download":false}]},"releases":[{"tag_name":"movies-v0.7.6","assets":[{"name":"Kosovo-SamsungTV-v0.7.6.wgt","browser_download_url":"https://github.com/tqh180581/qhsamsung/releases/download/movies-v0.7.6/Kosovo-SamsungTV-v0.7.6.wgt","size":12331412,"digest":"sha256:13adae22402f6e9dc70f887300046d275ccd784c39c22e1b23188d300b9a94ca"}]}]};
+
+};
+defs["./personal.js"] = function (module,exports,require) {
+/* Personal packages pinned inside the signed QHSamsung application.
+ * Only these exact URLs and SHA-256 values may extend the verified upstream catalog.
+ * Runtime requests cannot add or change entries in this list. */
+'use strict';
+var pinned = require('./personal-catalog.js');
+var catalogTrust = require('./catalog.js');
+
+exports.merge = function (verified) {
+    var provider = JSON.parse(JSON.stringify(pinned));
+    (provider.releases || []).forEach(function (release) {
+        (release.assets || []).forEach(function (asset) {
+            if (!/^https:\/\/github\.com\/tqh180581\/qhsamsung\/releases\/download\//.test(asset.browser_download_url || '') ||
+                !/^sha256:[a-f0-9]{64}$/i.test(asset.digest || '')) {
+                throw new Error('Invalid bundled personal package');
+            }
+        });
+    });
+    var source = verified ? verified.catalog : { schemaVersion: 1, providers: [] };
+    var catalog = {};
+    Object.keys(source).forEach(function (key) { catalog[key] = source[key]; });
+    catalog.providers = (source.providers || []).filter(function (p) { return p.id !== provider.id; }).concat([provider]);
+    var index = catalogTrust.index(catalog);
+    if (verified) Object.keys(verified.index).forEach(function (u) {
+        if (index[u] !== undefined && index[u] !== verified.index[u]) throw new Error('Personal package conflicts with verified catalog');
+    });
+    return {catalog: catalog, payload: JSON.stringify(catalog), index: index};
+};
+
+};
 defs["./index.js"] = function (module,exports,require) {
 /* TV-Store background service (#844): the control plane the on-screen UI drives over loopback HTTP,
  * and the install pipeline (download -> sign -> push -> vd_appinstall) over the sdb client.
@@ -592,6 +627,7 @@ var signer = require('./signer.js');
 var zip = require('./zip.js');
 var catalogTrust = require('./catalog.js');
 var CATALOG_KEY = require('./catalog-key.js');
+var personalCatalog = require('./personal.js');
 
 var PORT = 8077;
 // Signed by the Apps2Samsung catalog workflow; see catalog.js for why the content is checked
@@ -774,10 +810,20 @@ function withCatalog(cb, fresh) {
     CATALOG_WAITING = [cb];
     function done(err, cat) { var w = CATALOG_WAITING; CATALOG_WAITING = null; w.forEach(function (f) { f(err, cat); }); }
     get(CATALOG_URL, function (err, buf) {
-        if (err) return done(err);
+        if (err) {
+            // An unavailable upstream never authorizes arbitrary downloads. Only the exact
+            // personal packages pinned in this signed application remain available.
+            var local;
+            try { local = personalCatalog.merge(null); } catch (e) { return done(e); }
+            local.at = Date.now(); CATALOG = local;
+            log('catalog: upstream unavailable; using bundled personal packages only');
+            return done(null, local);
+        }
         var cat;
         try { cat = catalogTrust.verify(buf, CATALOG_KEY); }
         catch (e) { log('catalog: ' + e.message); return done(e); }
+        try { cat = personalCatalog.merge(cat); }
+        catch (e) { return done(e); }
         cat.at = Date.now(); CATALOG = cat;
         log('catalog: signature ok, generated ' + cat.catalog.generatedAt + ', ' + Object.keys(cat.index).length + ' files');
         done(null, cat);
