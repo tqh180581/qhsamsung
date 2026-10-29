@@ -225,6 +225,8 @@
             return byKey[key];
         }
         (cat.providers || []).forEach(function (p) {
+            // QHSamsung imports this community repository only.
+            if (p.id !== 'tizen-community') return;
             if (p.ok === false) return;
             var rel = (p.releases || [])[0]; if (!rel) return;
             var assets = (rel.assets || []).filter(function (a) { return /\.(wgt|tpk)$/i.test(a.name); });

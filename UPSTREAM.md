@@ -10,3 +10,5 @@ Bản tùy biến cá nhân từ Apps2Samsung TV-Store 0.3.8.
 Thay đổi: tên hiển thị QHSamsung, nhãn phiên bản tùy biến, tách mô-đun dịch vụ từ gói phát hành, bổ sung công cụ đóng gói và tài liệu. Định danh, giao thức kích hoạt, cơ chế kiểm tra chữ ký và nguồn danh sách giữ nguyên.
 
 Các mô-đun dịch vụ được tách từ bản bundle của tệp phát hành, không phải bản clone đầy đủ lịch sử Git. Không kèm chứng chỉ Samsung hay thông tin đăng nhập.
+
+Danh sách ứng dụng được nhập từ provider `tizen-community` trong danh sách có chữ ký Apps2Samsung, đối chiếu với release `community-743` của https://github.com/Apps2Samsung/tizen-community-packages. Giữ metadata và liên kết tải gốc; không sao chép tệp cài ứng dụng sang repository này. Mỗi ứng dụng giữ quyền và giấy phép riêng từ tác giả tương ứng.

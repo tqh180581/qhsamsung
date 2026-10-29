@@ -2,7 +2,7 @@
 
 ## Tình trạng
 
-Đã chuẩn bị mã tùy biến và công cụ ký danh sách. Repository cá nhân: `https://github.com/tqh180581/qhsamsung`, khởi đầu ở chế độ private. Chưa xuất bản Pages. `qhsamsung.json` là địa chỉ dự kiến, chưa phải đường dẫn đang hoạt động. Danh sách riêng hiện để trống; bản đóng gói vẫn dùng nguồn Apps2Samsung cho đến khi chạy `configure` và đóng gói lại.
+Đã chuẩn bị mã tùy biến và công cụ ký danh sách. Repository cá nhân: `https://github.com/tqh180581/qhsamsung`, khởi đầu ở chế độ private. Chưa xuất bản Pages. `qhsamsung.json` là địa chỉ dự kiến, chưa phải đường dẫn đang hoạt động. Đã nhập 119 nhóm ứng dụng với 148 gói/biến thể từ `community-743`; bản đóng gói dùng nguồn đã ký của Apps2Samsung và lọc chỉ còn `tizen-community` cho đến khi chạy `configure` và đóng gói lại.
 
 ## Repository
 
@@ -10,7 +10,7 @@ Tạo repository tên `qhsamsung` trong tài khoản `tqh180581`. Khởi đầu 
 
 ## Danh sách riêng
 
-`catalog/catalog.json` dùng cấu trúc resolved catalog của TV-Store, gồm `providers[].releases[].assets[]`. Mỗi tệp cần `name`, `browser_download_url` HTTPS, `size` và `digest` dạng `sha256:<64 ký tự hex>`. Phần metadata mô tả ứng dụng phải theo cấu trúc của danh sách gốc để giao diện nhận diện đúng. Danh sách rỗng ban đầu không cung cấp ứng dụng nào.
+`catalog/catalog.json` dùng cấu trúc resolved catalog của TV-Store, gồm `providers[].releases[].assets[]`. Mỗi tệp cần `name`, `browser_download_url` HTTPS, `size` và `digest` dạng `sha256:<64 ký tự hex>`. Phần metadata mô tả ứng dụng giữ cấu trúc danh sách gốc để giao diện nhận diện đúng. `catalog/community-import.json` ghi nhận nguồn và thời điểm nhập; `catalog/APPS.md` liệt kê liên kết tải.
 
 1. Chuẩn bị khóa RSA riêng bên ngoài thư mục dự án và lưu bản sao an toàn. Không gửi khóa vào chat.
 2. Thêm các ứng dụng được phép phân phối vào danh sách. Tệp `.wgt` có thể lưu ở GitHub Releases.

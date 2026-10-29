@@ -1,0 +1,10 @@
+{
+  "sourceRepository": "https://github.com/Apps2Samsung/tizen-community-packages",
+  "release": "community-743",
+  "releaseUrl": "https://github.com/Apps2Samsung/tizen-community-packages/releases/tag/community-743",
+  "importedAt": "2026-10-29T02:58:59.309Z",
+  "signedCatalogGeneratedAt": "2026-10-28T23:35:30.3472659+00:00",
+  "apps": 119,
+  "variants": 148,
+  "packagesCopied": false
+}
