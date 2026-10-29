@@ -1,0 +1,13 @@
+dist/
+node_modules/
+.env
+.env.*
+*.p12
+*.pfx
+*.pem
+*.key
+*.csr
+.a2s-tvstore-certs.json
+Certificate/
+apps2samsung-data/
+secrets/

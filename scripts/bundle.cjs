@@ -1,0 +1,12 @@
+const fs = require('fs');
+const path = require('path');
+const root = path.resolve(__dirname, '..');
+const modules = ['compat.js','sdb.js','zip.js','signer.js','catalog.js','catalog-key.js','index.js'];
+let out = '/* QHSamsung personal build; derived from Apps2Samsung TV-Store 0.3.8. */\n';
+out += '(function (nodeRequire, hostModule) {\n"use strict";\nvar defs = {}, cache = {};\n';
+out += 'function load(id) { if (cache[id]) return cache[id].exports; if (!defs[id]) return nodeRequire(id); var m = cache[id] = {exports:{}}; defs[id](m,m.exports,load); return m.exports; }\n';
+for (const file of modules) out += 'defs['+JSON.stringify('./'+file)+'] = function (module,exports,require) {\n'+fs.readFileSync(path.join(root,'service-src',file),'utf8')+'\n};\n';
+out += 'var api = load("./index.js");\nif (hostModule && hostModule.exports) for (var k in api) hostModule.exports[k] = api[k];\n';
+out += '})(typeof require === "function" ? require : null, typeof module === "object" ? module : null);\n';
+fs.writeFileSync(path.join(root,'tizen-app','service','index.js'),out);
+console.log('Service bundle ready');
