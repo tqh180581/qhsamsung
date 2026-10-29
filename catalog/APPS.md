@@ -154,3 +154,7 @@ Nguồn: https://github.com/Apps2Samsung/tizen-community-packages · Bản commu
 | Wall | 1.0.0 | other | Wall.wgt | [Tải từ nguồn](https://github.com/Apps2Samsung/tizen-community-packages/releases/download/community-743/Wall.wgt) |
 | Xtream IPTV Player | 1.0.0 | iptv | XtreamIPTV.wgt | [Tải từ nguồn](https://github.com/Apps2Samsung/tizen-community-packages/releases/download/community-743/XtreamIPTV.wgt) |
 | YouTube Dummy | 1.0.0 | streaming | youtube-dummy.wgt | [Tải từ nguồn](https://github.com/Apps2Samsung/tizen-community-packages/releases/download/community-743/youtube-dummy.wgt) |
+
+## Ứng dụng cá nhân
+
+Xem [Kosovo SamsungTV 0.7.6](PERSONAL-APPS.md). Gói riêng tư cần tải và cài từ máy tính có quyền truy cập.

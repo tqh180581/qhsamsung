@@ -1,6 +1,8 @@
 const fs = require('fs');
 const path = require('path');
 const root = path.resolve(__dirname, '..');
+const personal = JSON.parse(fs.readFileSync(path.join(root,'catalog/personal-apps.json'),'utf8'));
+fs.writeFileSync(path.join(root,'tizen-app/js/personal-catalog.js'), '/* Personal metadata; installation still requires the verified service catalog. */\nwindow.QH_PERSONAL_CATALOG = '+JSON.stringify(personal).replace(/</g,'\\u003c')+';\n');
 const modules = ['compat.js','sdb.js','zip.js','signer.js','catalog.js','catalog-key.js','index.js'];
 let out = '/* QHSamsung personal build; derived from Apps2Samsung TV-Store 0.3.8. */\n';
 out += '(function (nodeRequire, hostModule) {\n"use strict";\nvar defs = {}, cache = {};\n';

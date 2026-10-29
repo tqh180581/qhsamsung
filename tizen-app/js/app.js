@@ -29,7 +29,7 @@
     // TV's current IP and loopback too, and keeps whichever answers.
     var BASE = 'http://127.0.0.1:8077';
     var KOFI = 'https://ko-fi.com/patrickst';
-    var VERSION = '0.3.8-qh1';
+    var VERSION = '0.3.8-qh2';
     var KEY = { LEFT: 37, UP: 38, RIGHT: 39, DOWN: 40, ENTER: 13, RETURN: 10009, ESC: 27, BACK: 8 };
 
     // What the manifest providers are called; resolved.json carries only their ids.
@@ -224,9 +224,13 @@
             }
             return byKey[key];
         }
-        (cat.providers || []).forEach(function (p) {
+        // Personal entries ship inside the signed application, for display only.
+        // The service still installs only URLs in its cryptographically verified catalog.
+        var providers = (cat.providers || []).filter(function (p) { return p.id !== 'qhsamsung-personal'; });
+        if (window.QH_PERSONAL_CATALOG) providers.push(window.QH_PERSONAL_CATALOG);
+        providers.forEach(function (p) {
             // QHSamsung imports this community repository only.
-            if (p.id !== 'tizen-community') return;
+            if (p.id !== 'tizen-community' && p.id !== 'qhsamsung-personal') return;
             if (p.ok === false) return;
             var rel = (p.releases || [])[0]; if (!rel) return;
             var assets = (rel.assets || []).filter(function (a) { return /\.(wgt|tpk)$/i.test(a.name); });
@@ -242,7 +246,8 @@
                     if (e.adult) x.adult = true;
                     var root = (e.flags || []).indexOf('root') >= 0;
                     if (root) x.root = true;
-                    if (root) v.needsHead = 'gains root on the TV and needs Host PC IP changed afterwards';
+                    if (p.id === 'qhsamsung-personal') v.needsHead = 'is a personal package: download it from GitHub on an authorized PC and install with Apps2Samsung';
+                    else if (root) v.needsHead = 'gains root on the TV and needs Host PC IP changed afterwards';
                     else if (e.user_settings) v.needsHead = 'asks for settings before it installs';
                     else if (HEAD_ONLY.test(e.file)) v.needsHead = 'is configured by Apps2Samsung while it installs';
                     else if (!a.digest) v.needsHead = NO_HASH;

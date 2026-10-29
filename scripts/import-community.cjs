@@ -43,6 +43,8 @@ async function run() {
   }
   if (missing.length) throw new Error('Catalog files missing from release: ' + missing.join(', '));
   const catalog = {schemaVersion:verified.catalog.schemaVersion, generatedAt:verified.catalog.generatedAt, providers:[provider]};
+  const personalFile = path.join(root,'catalog/personal-apps.json');
+  if (fs.existsSync(personalFile)) catalog.providers.push(JSON.parse(fs.readFileSync(personalFile,'utf8')));
   const groups = new Set(provider.catalog.apps.map(a => a.group || a.name));
   const summary = {sourceRepository:'https://github.com/Apps2Samsung/tizen-community-packages', release:release.tag_name, releaseUrl:release.html_url, importedAt:new Date().toISOString(), signedCatalogGeneratedAt:catalog.generatedAt, apps:groups.size, variants:provider.catalog.apps.length, packagesCopied:false};
   const dir = path.join(root, 'catalog'); fs.mkdirSync(dir,{recursive:true});
@@ -55,6 +57,7 @@ async function run() {
   });
   const doc = '# Ứng dụng QHSamsung\n\nNguồn: '+summary.sourceRepository+' · Bản '+summary.release+'\n\n'+summary.apps+' nhóm ứng dụng, '+summary.variants+' gói/biến thể. Tệp cài vẫn tải từ kho gốc. Không phải tất cả ứng dụng tương thích Tizen 5.0.\n\n| Ứng dụng | Phiên bản | Nhóm | Gói | Tải |\n|---|---|---|---|---|\n'+rows.join('\n')+'\n';
   fs.writeFileSync(path.join(dir,'APPS.md'),doc);
+  if (fs.existsSync(personalFile)) fs.appendFileSync(path.join(dir,'APPS.md'),'\n## Ứng dụng cá nhân\n\nXem [danh sách cá nhân](PERSONAL-APPS.md). Gói riêng tư cần tải và cài từ máy tính có quyền truy cập.\n');
   console.log(JSON.stringify(summary,null,2));
 }
 run().catch(err => {console.error(err.message);process.exitCode=1;});

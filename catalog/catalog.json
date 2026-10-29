@@ -2947,6 +2947,42 @@
           }
         ]
       }
+    },
+    {
+      "id": "qhsamsung-personal",
+      "ok": true,
+      "url": "https://api.github.com/repos/tqh180581/qhsamsung/releases",
+      "latestTag": "movies-v0.7.6",
+      "catalog": {
+        "apps": [
+          {
+            "name": "Kosovo SamsungTV",
+            "group": "Kosovo SamsungTV",
+            "file": "Kosovo-SamsungTV-v0.7.6.wgt",
+            "version": "0.7.6",
+            "category": "streaming",
+            "description": "KOSOVO PANEL dành cho Samsung Tizen 5.0 trở lên. Cần tài khoản dịch vụ riêng. Gói cài nằm trong kho GitHub riêng tư; tải trên máy tính có quyền truy cập rồi cài bằng Apps2Samsung.",
+            "repo": "tqh180581/qhsamsung",
+            "app_id": "KsvTv2019A.KosovoTV",
+            "package_id": "KsvTv2019A",
+            "min_tizen_version": "5.0",
+            "private_download": true
+          }
+        ]
+      },
+      "releases": [
+        {
+          "tag_name": "movies-v0.7.6",
+          "assets": [
+            {
+              "name": "Kosovo-SamsungTV-v0.7.6.wgt",
+              "browser_download_url": "https://github.com/tqh180581/qhsamsung/releases/download/movies-v0.7.6/Kosovo-SamsungTV-v0.7.6.wgt",
+              "size": 12331412,
+              "digest": "sha256:13adae22402f6e9dc70f887300046d275ccd784c39c22e1b23188d300b9a94ca"
+            }
+          ]
+        }
+      ]
     }
   ]
 }
