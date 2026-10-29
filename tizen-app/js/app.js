@@ -29,7 +29,7 @@
     // TV's current IP and loopback too, and keeps whichever answers.
     var BASE = 'http://127.0.0.1:8077';
     var KOFI = 'https://ko-fi.com/patrickst';
-    var VERSION = '0.3.8-qh5';
+    var VERSION = '0.4.0-qh6';
     var KEY = { LEFT: 37, UP: 38, RIGHT: 39, DOWN: 40, ENTER: 13, RETURN: 10009, ESC: 27, BACK: 8 };
 
     // What the manifest providers are called; resolved.json carries only their ids.
@@ -239,6 +239,9 @@
             if (p.catalog && p.catalog.apps) {
                 // The community bundle: the catalog is the truth, the release gives the download.
                 p.catalog.apps.forEach(function (e) {
+                    // QHSamsung shares this identity for Apps2Samsung's Arm TV-Store flow.
+                    // Offering the upstream app as an update would overwrite this personal fork.
+                    if (e.package_id === 'A2STVStore' || e.app_id === 'A2STVStore.Store' || e.file === 'TV-Store.wgt') return;
                     var a = byFile[e.file]; if (!a) return;
                     var v = variant(e.variant, e.file, a.browser_download_url, e.version || a.package_version, e.app_id || a.app_id, e.package_id || a.package_id);
                     var x = app('c:' + (e.group || e.name), e.group || e.name, e.category, e.description, ownerOf(e.repo));
