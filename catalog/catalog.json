@@ -2960,7 +2960,7 @@
             "group": "Kosovo SamsungTV",
             "file": "Kosovo-SamsungTV-v0.7.6.wgt",
             "version": "0.7.6",
-            "category": "streaming",
+            "category": "iptv",
             "description": "KOSOVO PANEL dành cho Samsung Tizen 5.0 trở lên. Cần tài khoản dịch vụ riêng. Gói cài nằm trong kho GitHub riêng tư; tải trên máy tính có quyền truy cập rồi cài bằng Apps2Samsung.",
             "repo": "tqh180581/qhsamsung",
             "app_id": "KsvTv2019A.KosovoTV",
