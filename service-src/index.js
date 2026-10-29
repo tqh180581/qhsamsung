@@ -168,8 +168,9 @@ function signAndInstall(entry, remoteName, inFile, outFile, cb) {
         var ip = ownIp();
         if (!ip) return cb(new Error('could not determine this TV’s own IP'));
         var c = new sdb.SdbClient(ip);
+        log('install: connecting to this TV at ' + ip + ':26101; Developer Mode Host PC IP must be ' + ip);
         c.connect(function (err) {
-            if (err) { c.end(); return cb(err); }
+            if (err) { log('install: ' + err.message); c.end(); return cb(err); }
             var remote = STAGING + '/' + remoteName, fd;
             try { fd = fs.openSync(outFile, 'r'); } catch (e) { c.end(); return cb(e); }
             log('install: pushing to ' + remote);

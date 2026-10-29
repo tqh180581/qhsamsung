@@ -61,7 +61,12 @@ function SdbClient(host, port) {
 SdbClient.prototype.connect = function (cb) {
     var self = this;
     var done = false;
-    function finish(err) { if (done) return; done = true; cb(err); }
+    function finish(err) {
+        if (done) return;
+        done = true;
+        if (!err && self._sock) self._sock.setTimeout(0);
+        cb(err);
+    }
     var sock = net.connect(this.port, this.host, function () {
         sock.write(frame(CMD.CNXN, CLIENT_VERSION, MAXDATA, Buf.from('host::sdb-net-client')));
     });
@@ -69,9 +74,18 @@ SdbClient.prototype.connect = function (cb) {
     sock.setTimeout(15000);
     this._demux = new Demux(function (f) { self._onFrame(f, finish); });
     sock.on('data', function (d) { self._demux.push(d); });
-    sock.on('timeout', function () { finish(new Error('sdb connect timed out')); });
+    sock.on('timeout', function () {
+        var err = new Error('TV connection timed out. Set Developer Mode Host PC IP to this TV\'s own IP, then restart the TV.');
+        finish(err); self._failAll(err); sock.destroy();
+    });
     sock.on('error', function (e) { finish(new Error('sdb socket error: ' + ((e && e.code) || e.message))); self._failAll(e); });
-    sock.on('close', function () { self._connected = false; self._failAll(new Error('connection closed')); });
+    sock.on('close', function () {
+        var err = new Error('TV closed the install connection. Set Developer Mode Host PC IP to this TV\'s own IP, then restart the TV.');
+        self._connected = false;
+        // A TV with a different Host PC IP can close before sending CNXN. There are no
+        // channels yet, so _failAll alone would leave connect's callback waiting forever.
+        finish(err); self._failAll(err);
+    });
 };
 
 SdbClient.prototype._onFrame = function (f, connectCb) {
