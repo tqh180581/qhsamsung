@@ -11,10 +11,10 @@ const root = path.resolve(__dirname, '..');
 const catalogTrust = require('../service-src/catalog.js');
 const zip = require('../service-src/zip.js');
 const metadata = JSON.parse(fs.readFileSync(path.join(root, 'catalog/personal-apps.json'), 'utf8'));
-const tag = 'kosovo-tizen5plus-v0.8.1';
-const file = 'Kosovo-SamsungTV-Tizen5plus-v0.8.1.wgt';
+const tag = 'kosovo-tizen5plus-v0.8.2';
+const file = 'Kosovo-SamsungTV-Tizen5plus-v0.8.2.wgt';
 const download = 'https://github.com/tqh180581/qhsamsung/releases/download/' + tag + '/' + file;
-const digest = '4ae6de1576ed080989010f4a4aa894e30ef760ad60fdfe7da4b06301e4867855';
+const digest = '45d521d7181f09d81cd23d1eed01f8db12f0edc76092c6b3bb3825f683922d88';
 const previousUrl = 'https://github.com/tqh180581/qhsamsung/releases/download/kosovo-tizen5plus-v0.8.0/Kosovo-SamsungTV-Tizen5plus-v0.8.0.wgt';
 const previousDigest = '536866a4b4b0d72d362be991c6339f88cb67526c43786cd05e73408e4aeaa592';
 const oldUrl = 'https://github.com/tqh180581/qhsamsung/releases/download/movies-v0.7.6/Kosovo-SamsungTV-v0.7.6.wgt';
@@ -56,24 +56,24 @@ function installProbe(url, hash, catalog) {
     context.signAndInstall = (entry, name, input, output, cb) => { calls.signingBoundary++; cb(null, { fixtureOnly: true }); };
     return new Promise(resolve => context.install({ url, file, appId: 'KsvTv2019A.KosovoTV', packageId: 'KsvTv2019A' }, (error, result) => resolve({ error, result, calls })));
 }
-test('release metadata selects exact 0.8.1 unsigned bytes while preserving the complete 0.8.0 and 0.7.6 pins', () => {
+test('release metadata selects exact 0.8.2 unsigned bytes while preserving the complete 0.8.0 and 0.7.6 pins', () => {
     assert.equal(metadata.latestTag, tag);
     const app = metadata.catalog.apps[0], asset = metadata.releases[0].assets[0];
-    assert.equal(app.version, '0.8.1'); assert.equal(app.file, file);
+    assert.equal(app.version, '0.8.2'); assert.equal(app.file, file);
     assert.equal(app.app_id, 'KsvTv2019A.KosovoTV'); assert.equal(app.package_id, 'KsvTv2019A');
     assert.equal(app.min_tizen_version, '5.0'); assert.equal(app.private_download, false);
     assert.equal(metadata.releases[0].tag_name, tag);
-    assert.deepEqual(asset, { name: file, browser_download_url: download, size: 12326470, digest: 'sha256:' + digest });
+    assert.deepEqual(asset, { name: file, browser_download_url: download, size: 12330119, digest: 'sha256:' + digest });
     assert.deepEqual(metadata.releases.map(release => release.tag_name), [tag, 'kosovo-tizen5plus-v0.8.0', 'movies-v0.7.6']);
     const previous = metadata.releases.find(release => release.tag_name === 'kosovo-tizen5plus-v0.8.0');
     assert.deepEqual(previous.assets[0], { name: 'Kosovo-SamsungTV-Tizen5plus-v0.8.0.wgt', browser_download_url: previousUrl, size: 12326565, digest: 'sha256:' + previousDigest });
     const older = metadata.releases.find(release => release.tag_name === 'movies-v0.7.6');
     assert.deepEqual(older.assets[0], { name: 'Kosovo-SamsungTV-v0.7.6.wgt', browser_download_url: oldUrl, size: 12331412, digest: 'sha256:' + oldDigest });
-    const widget = process.env.KOSOVO_V081_WGT || path.resolve(root, '../kosovo-tizen/dist/kosovo-tizen5plus-unsigned.wgt');
+    const widget = process.env.KOSOVO_V082_WGT || path.resolve(root, '../kosovo-tizen/dist/kosovo-tizen5plus-unsigned.wgt');
     const bytes = fs.readFileSync(widget); assert.equal(bytes.length, asset.size);
     assert.equal(crypto.createHash('sha256').update(bytes).digest('hex'), digest);
     const manifest = zip.readEntries(bytes).find(entry => entry.name === 'config.xml').data.toString('utf8');
-    assert.match(manifest, /<widget\b[^>]*\bversion="0\.8\.1"/);
+    assert.match(manifest, /<widget\b[^>]*\bversion="0\.8\.2"/);
     assert.match(manifest, /<tizen:application id="KsvTv2019A\.KosovoTV" package="KsvTv2019A" required_version="5\.0"/);
 });
 test('generated UI metadata, service metadata and bundled service contain the same pinned catalogue', () => {
@@ -89,10 +89,10 @@ test('generated UI metadata, service metadata and bundled service contain the sa
 });
 test('Store version increases while application/service identity and Tizen minimum stay unchanged', () => {
     const xml = fs.readFileSync(path.join(root, 'tizen-app/config.xml'), 'utf8');
-    assert.match(xml, /<widget\b[^>]*\bversion="0\.4\.2"/);
+    assert.match(xml, /<widget\b[^>]*\bversion="0\.4\.3"/);
     assert.match(xml, /<tizen:application id="A2STVStore\.Store" package="A2STVStore" required_version="3\.0"/);
     assert.match(xml, /<tizen:service id="A2STVStore\.sdbservice"/);
-    assert.match(fs.readFileSync(path.join(root, 'tizen-app/js/app.js'), 'utf8'), /var VERSION = '0\.4\.2-qh8'/);
+    assert.match(fs.readFileSync(path.join(root, 'tizen-app/js/app.js'), 'utf8'), /var VERSION = '0\.4\.3-qh9'/);
 });
 test('bundled extension retains all three pins and verified upstream entries without mutating either input', () => {
     const upstream = { schemaVersion: 1, generatedAt: '2026-10-30T00:00:00Z', providers: [{ id: 'fixture-upstream', releases: [{ assets: [{ browser_download_url: 'https://fixture.invalid/upstream.wgt', digest: 'sha256:' + 'a'.repeat(64) }] }] }] };

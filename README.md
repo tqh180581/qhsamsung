@@ -2,17 +2,17 @@
 
 Kho ứng dụng cá nhân cho TV Samsung Tizen. Chủ tài khoản dự kiến: `tqh180581`.
 
-## Bản 0.4.2-qh8
+## Bản 0.4.3-qh9
 
 - Tên hiển thị **QHSamsung · Personal Store**.
 - Danh sách từ kho Apps2Samsung/tizen-community-packages: **119 nhóm ứng dụng, 148 gói/biến thể**, bản `community-743`. Xem [danh sách ứng dụng](catalog/APPS.md).
-- App cá nhân **Kosovo SamsungTV / KOSOVO PANEL 0.8.1** ở **IPTV & Live TV**, dành cho Samsung Tizen 5.0 trở lên. Bản này khôi phục cách xử lý điều hướng của 0.7.6 sau phản hồi phím remote/cuộn bị giật trên 0.8.0; vẫn giữ thông tin model/phiên bản tự nhận và phần phát ổn định. URL cùng SHA-256 được ghim trong gói QHSamsung đã ký. Xem [danh sách cá nhân](catalog/PERSONAL-APPS.md).
-- Release 0.8.0 và 0.7.6 giữ nguyên làm nguồn khôi phục có chủ đích. UI hiển thị release đầu tiên, chưa có nút hạ phiên bản.
+- App cá nhân **Kosovo SamsungTV / KOSOVO PANEL 0.8.2** ở **IPTV & Live TV**, dành cho Samsung Tizen 5.0 trở lên, tự nhận model/phiên bản và tối ưu kết xuất thẻ Trang chủ với số lớp hiển thị có giới hạn. URL cùng SHA-256 được ghim trong gói QHSamsung đã ký. Xem [danh sách cá nhân](catalog/PERSONAL-APPS.md).
+- Release 0.8.0 và 0.7.6 giữ nguyên làm nguồn khôi phục có chủ đích. UI hiển thị release mới nhất, chưa có nút hạ phiên bản.
 - Mã giao diện và dịch vụ tải, xác thực, ký, cài ứng dụng từ TV-Store 0.3.8.
 - Các mô-đun dịch vụ có thể chỉnh sửa trong `service-src/`.
 - Đóng gói `.wgt` trên Windows bằng `scripts/build.ps1` (cần Node.js).
 
-Đây là bản tùy biến cá nhân tại `tqh180581/qhsamsung`. Bản 0.4.2-qh8 cần được ký và nghiệm thu trên TV riêng; kiểm thử offline không chứng minh cài đặt hay phát nội dung. TV hiện chưa sẵn sàng để kiểm tra lại remote/cuộn, nên không tuyên bố 0.8.1 đã được xác nhận hết giật trên TV. Không coi phiên bản Tizen tối thiểu là bảo đảm mọi codec/nguồn đều chạy trên mọi model.
+Đây là bản tùy biến cá nhân tại `tqh180581/qhsamsung`. Bản 0.4.3-qh9 được tạo từ đúng nền 0.4.1-qh7 (`f3b3511`), chỉ cập nhật phiên bản Store và metadata KOSOVO 0.8.2; giao diện, trình cài, guard và các chức năng runtime giữ nguyên. Release dự kiến: `qhsamsung-v0.4.3-qh9`. Gói build ở đây chưa ký hoặc cài lên TV; kiểm thử offline không chứng minh cài đặt hay độ mượt trên TV.
 
 ## Nguồn ứng dụng hiện tại
 
@@ -34,14 +34,15 @@ powershell -ExecutionPolicy Bypass -File scripts/build.ps1
 
 Kết quả: `dist/QHSamsung.wgt`, chưa ký chứng chỉ Samsung. Có thể ký và cài bằng Apps2Samsung sau khi kiểm tra bản tùy biến.
 
-Kiểm thử offline bằng Node.js hiện đại, chỉ vào file WGT 0.8.1 đã build nếu không có source KOSOVO PANEL ở thư mục bên cạnh:
+Kiểm thử offline bằng Node.js hiện đại, chỉ vào file WGT 0.8.2 đã build nếu không có source KOSOVO PANEL ở thư mục bên cạnh:
 
 ```powershell
-$env:KOSOVO_V081_WGT = 'C:\DUONG_DAN\kosovo-tizen5plus-unsigned.wgt'
-node --test scripts/test-personal-update.cjs
+$env:KOSOVO_V082_WGT = 'C:\DUONG_DAN\kosovo-tizen5plus-unsigned.wgt'
+node --test scripts/test-personal-update.cjs scripts/test-store-release.cjs
+node scripts/test-sdb-connect.cjs
 ```
 
-Bộ kiểm thử không dùng mạng/TV, không đọc certificate riêng và không thực hiện ký. Đường tải/cài được dừng ở boundary mô phỏng sau khi kiểm URL/hash thật của service.
+Bộ kiểm thử pin không dùng mạng/TV, không đọc certificate riêng và không thực hiện ký. Đường tải/cài được dừng ở boundary mô phỏng sau khi kiểm URL/hash thật của service. Kiểm tra SDB riêng chỉ dùng socket loopback mô phỏng. Kiểm thử gói cũng đối chiếu runtime 0.4.1 và đường dẫn ZIP dùng dấu `/`.
 
 **Định danh ứng dụng vẫn là `A2STVStore.Store` để giữ tương thích với chức năng Arm TV-Store. Cài bản này sẽ cập nhật/thay thế TV-Store hiện tại, không tạo ứng dụng thứ hai.** Nếu cần chạy song song phải đổi định danh, cổng dịch vụ và bổ sung công cụ kích hoạt riêng.
 

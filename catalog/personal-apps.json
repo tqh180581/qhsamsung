@@ -2,16 +2,16 @@
   "id": "qhsamsung-personal",
   "ok": true,
   "url": "https://api.github.com/repos/tqh180581/qhsamsung/releases",
-  "latestTag": "kosovo-tizen5plus-v0.8.1",
+  "latestTag": "kosovo-tizen5plus-v0.8.2",
   "catalog": {
     "apps": [
       {
         "name": "Kosovo SamsungTV",
         "group": "Kosovo SamsungTV",
-        "file": "Kosovo-SamsungTV-Tizen5plus-v0.8.1.wgt",
-        "version": "0.8.1",
+        "file": "Kosovo-SamsungTV-Tizen5plus-v0.8.2.wgt",
+        "version": "0.8.2",
         "category": "iptv",
-        "description": "KOSOVO PANEL 0.8.1 dành cho Samsung Tizen 5.0 trở lên, giữ thông tin TV tự nhận và khôi phục điều hướng 0.7.6 sau phản hồi remote/cuộn bị giật. Chưa xác nhận lại trên TV. Chọn Install hoặc Update; cần tài khoản dịch vụ riêng.",
+        "description": "KOSOVO PANEL 0.8.2 dành cho Samsung Tizen 5.0 trở lên, tự nhận model và phiên bản ứng dụng, tối ưu kết xuất thẻ Trang chủ bằng số lớp hiển thị có giới hạn. Chọn Install hoặc Update; cần tài khoản dịch vụ riêng.",
         "repo": "tqh180581/qhsamsung",
         "app_id": "KsvTv2019A.KosovoTV",
         "package_id": "KsvTv2019A",
@@ -22,13 +22,13 @@
   },
   "releases": [
     {
-      "tag_name": "kosovo-tizen5plus-v0.8.1",
+      "tag_name": "kosovo-tizen5plus-v0.8.2",
       "assets": [
         {
-          "name": "Kosovo-SamsungTV-Tizen5plus-v0.8.1.wgt",
-          "browser_download_url": "https://github.com/tqh180581/qhsamsung/releases/download/kosovo-tizen5plus-v0.8.1/Kosovo-SamsungTV-Tizen5plus-v0.8.1.wgt",
-          "size": 12326470,
-          "digest": "sha256:4ae6de1576ed080989010f4a4aa894e30ef760ad60fdfe7da4b06301e4867855"
+          "name": "Kosovo-SamsungTV-Tizen5plus-v0.8.2.wgt",
+          "browser_download_url": "https://github.com/tqh180581/qhsamsung/releases/download/kosovo-tizen5plus-v0.8.2/Kosovo-SamsungTV-Tizen5plus-v0.8.2.wgt",
+          "size": 12330119,
+          "digest": "sha256:45d521d7181f09d81cd23d1eed01f8db12f0edc76092c6b3bb3825f683922d88"
         }
       ]
     },
