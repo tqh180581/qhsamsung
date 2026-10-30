@@ -11,10 +11,12 @@ const root = path.resolve(__dirname, '..');
 const catalogTrust = require('../service-src/catalog.js');
 const zip = require('../service-src/zip.js');
 const metadata = JSON.parse(fs.readFileSync(path.join(root, 'catalog/personal-apps.json'), 'utf8'));
-const tag = 'kosovo-tizen5plus-v0.8.0';
-const file = 'Kosovo-SamsungTV-Tizen5plus-v0.8.0.wgt';
+const tag = 'kosovo-tizen5plus-v0.8.1';
+const file = 'Kosovo-SamsungTV-Tizen5plus-v0.8.1.wgt';
 const download = 'https://github.com/tqh180581/qhsamsung/releases/download/' + tag + '/' + file;
-const digest = '536866a4b4b0d72d362be991c6339f88cb67526c43786cd05e73408e4aeaa592';
+const digest = '4ae6de1576ed080989010f4a4aa894e30ef760ad60fdfe7da4b06301e4867855';
+const previousUrl = 'https://github.com/tqh180581/qhsamsung/releases/download/kosovo-tizen5plus-v0.8.0/Kosovo-SamsungTV-Tizen5plus-v0.8.0.wgt';
+const previousDigest = '536866a4b4b0d72d362be991c6339f88cb67526c43786cd05e73408e4aeaa592';
 const oldUrl = 'https://github.com/tqh180581/qhsamsung/releases/download/movies-v0.7.6/Kosovo-SamsungTV-v0.7.6.wgt';
 const oldDigest = '13adae22402f6e9dc70f887300046d275ccd784c39c22e1b23188d300b9a94ca';
 function copy(value) { return JSON.parse(JSON.stringify(value)); }
@@ -50,25 +52,28 @@ function service() {
 function installProbe(url, hash, catalog) {
     const context = service(), calls = { downloads: 0, signingBoundary: 0 };
     context.withCatalog = cb => cb(null, catalog || personal().merge(null));
-    context.getToFile = (url, target, cb) => { calls.downloads++; cb(null, { size: 12326565, sha256: hash }); };
+    context.getToFile = (url, target, cb) => { calls.downloads++; const asset = metadata.releases.flatMap(release => release.assets).find(item => item.browser_download_url === url); cb(null, { size: asset ? asset.size : 0, sha256: hash }); };
     context.signAndInstall = (entry, name, input, output, cb) => { calls.signingBoundary++; cb(null, { fixtureOnly: true }); };
     return new Promise(resolve => context.install({ url, file, appId: 'KsvTv2019A.KosovoTV', packageId: 'KsvTv2019A' }, (error, result) => resolve({ error, result, calls })));
 }
-test('release metadata selects 0.8.0 with the exact unsigned bytes while preserving the old 0.7.6 asset', () => {
+test('release metadata selects exact 0.8.1 unsigned bytes while preserving the complete 0.8.0 and 0.7.6 pins', () => {
     assert.equal(metadata.latestTag, tag);
     const app = metadata.catalog.apps[0], asset = metadata.releases[0].assets[0];
-    assert.equal(app.version, '0.8.0'); assert.equal(app.file, file);
+    assert.equal(app.version, '0.8.1'); assert.equal(app.file, file);
     assert.equal(app.app_id, 'KsvTv2019A.KosovoTV'); assert.equal(app.package_id, 'KsvTv2019A');
     assert.equal(app.min_tizen_version, '5.0'); assert.equal(app.private_download, false);
     assert.equal(metadata.releases[0].tag_name, tag);
-    assert.deepEqual(asset, { name: file, browser_download_url: download, size: 12326565, digest: 'sha256:' + digest });
+    assert.deepEqual(asset, { name: file, browser_download_url: download, size: 12326470, digest: 'sha256:' + digest });
+    assert.deepEqual(metadata.releases.map(release => release.tag_name), [tag, 'kosovo-tizen5plus-v0.8.0', 'movies-v0.7.6']);
+    const previous = metadata.releases.find(release => release.tag_name === 'kosovo-tizen5plus-v0.8.0');
+    assert.deepEqual(previous.assets[0], { name: 'Kosovo-SamsungTV-Tizen5plus-v0.8.0.wgt', browser_download_url: previousUrl, size: 12326565, digest: 'sha256:' + previousDigest });
     const older = metadata.releases.find(release => release.tag_name === 'movies-v0.7.6');
     assert.deepEqual(older.assets[0], { name: 'Kosovo-SamsungTV-v0.7.6.wgt', browser_download_url: oldUrl, size: 12331412, digest: 'sha256:' + oldDigest });
-    const widget = process.env.KOSOVO_V080_WGT || path.resolve(root, '../kosovo-tizen/dist/kosovo-tizen5plus-unsigned.wgt');
+    const widget = process.env.KOSOVO_V081_WGT || path.resolve(root, '../kosovo-tizen/dist/kosovo-tizen5plus-unsigned.wgt');
     const bytes = fs.readFileSync(widget); assert.equal(bytes.length, asset.size);
     assert.equal(crypto.createHash('sha256').update(bytes).digest('hex'), digest);
     const manifest = zip.readEntries(bytes).find(entry => entry.name === 'config.xml').data.toString('utf8');
-    assert.match(manifest, /<widget\b[^>]*\bversion="0\.8\.0"/);
+    assert.match(manifest, /<widget\b[^>]*\bversion="0\.8\.1"/);
     assert.match(manifest, /<tizen:application id="KsvTv2019A\.KosovoTV" package="KsvTv2019A" required_version="5\.0"/);
 });
 test('generated UI metadata, service metadata and bundled service contain the same pinned catalogue', () => {
@@ -84,16 +89,16 @@ test('generated UI metadata, service metadata and bundled service contain the sa
 });
 test('Store version increases while application/service identity and Tizen minimum stay unchanged', () => {
     const xml = fs.readFileSync(path.join(root, 'tizen-app/config.xml'), 'utf8');
-    assert.match(xml, /<widget\b[^>]*\bversion="0\.4\.1"/);
+    assert.match(xml, /<widget\b[^>]*\bversion="0\.4\.2"/);
     assert.match(xml, /<tizen:application id="A2STVStore\.Store" package="A2STVStore" required_version="3\.0"/);
     assert.match(xml, /<tizen:service id="A2STVStore\.sdbservice"/);
-    assert.match(fs.readFileSync(path.join(root, 'tizen-app/js/app.js'), 'utf8'), /var VERSION = '0\.4\.1-qh7'/);
+    assert.match(fs.readFileSync(path.join(root, 'tizen-app/js/app.js'), 'utf8'), /var VERSION = '0\.4\.2-qh8'/);
 });
-test('bundled extension retains both pins and verified upstream entries without mutating either input', () => {
+test('bundled extension retains all three pins and verified upstream entries without mutating either input', () => {
     const upstream = { schemaVersion: 1, generatedAt: '2026-10-30T00:00:00Z', providers: [{ id: 'fixture-upstream', releases: [{ assets: [{ browser_download_url: 'https://fixture.invalid/upstream.wgt', digest: 'sha256:' + 'a'.repeat(64) }] }] }] };
     const verified = { catalog: upstream, index: catalogTrust.index(upstream) }, before = JSON.stringify(verified), pinnedBefore = JSON.stringify(metadata);
     const merged = personal().merge(verified);
-    assert.equal(merged.index[download], digest); assert.equal(merged.index[oldUrl], oldDigest);
+    assert.equal(merged.index[download], digest); assert.equal(merged.index[previousUrl], previousDigest); assert.equal(merged.index[oldUrl], oldDigest);
     assert.equal(merged.index['https://fixture.invalid/upstream.wgt'], 'a'.repeat(64));
     assert.equal(JSON.stringify(verified), before); assert.equal(JSON.stringify(metadata), pinnedBefore);
 });
@@ -119,8 +124,8 @@ test('real install guard refuses mismatched or missing hashes before the signing
     const missing = await installProbe(download, digest, { index: { [download]: null } });
     assert.equal(missing.error.code, 'NO_HASH'); assert.deepEqual(missing.calls, { downloads: 0, signingBoundary: 0 });
 });
-test('only the exact new or rollback bytes reach the explicit no-signing boundary', async () => {
-    for (const [url, hash] of [[download, digest], [oldUrl, oldDigest]]) {
+test('matching latest and both retained hashes reach the explicit no-signing boundary', async () => {
+    for (const [url, hash] of [[download, digest], [previousUrl, previousDigest], [oldUrl, oldDigest]]) {
         const probe = await installProbe(url, hash);
         assert.equal(probe.error, null); assert.equal(probe.result.fixtureOnly, true);
         assert.deepEqual(probe.calls, { downloads: 1, signingBoundary: 1 });
