@@ -2,16 +2,16 @@
   "id": "qhsamsung-personal",
   "ok": true,
   "url": "https://api.github.com/repos/tqh180581/qhsamsung/releases",
-  "latestTag": "movies-v0.7.6",
+  "latestTag": "kosovo-tizen5plus-v0.8.0",
   "catalog": {
     "apps": [
       {
         "name": "Kosovo SamsungTV",
         "group": "Kosovo SamsungTV",
-        "file": "Kosovo-SamsungTV-v0.7.6.wgt",
-        "version": "0.7.6",
+        "file": "Kosovo-SamsungTV-Tizen5plus-v0.8.0.wgt",
+        "version": "0.8.0",
         "category": "iptv",
-        "description": "KOSOVO PANEL dành cho Samsung Tizen 5.0 trở lên. Chọn Install để tải và cài trên TV. Cần tài khoản dịch vụ riêng.",
+        "description": "KOSOVO PANEL 0.8.0 dành cho Samsung Tizen 5.0 trở lên, tự nhận model và phiên bản ứng dụng, tối ưu điều hướng. Chọn Install hoặc Update để cài trên TV. Cần tài khoản dịch vụ riêng.",
         "repo": "tqh180581/qhsamsung",
         "app_id": "KsvTv2019A.KosovoTV",
         "package_id": "KsvTv2019A",
@@ -21,6 +21,17 @@
     ]
   },
   "releases": [
+    {
+      "tag_name": "kosovo-tizen5plus-v0.8.0",
+      "assets": [
+        {
+          "name": "Kosovo-SamsungTV-Tizen5plus-v0.8.0.wgt",
+          "browser_download_url": "https://github.com/tqh180581/qhsamsung/releases/download/kosovo-tizen5plus-v0.8.0/Kosovo-SamsungTV-Tizen5plus-v0.8.0.wgt",
+          "size": 12326565,
+          "digest": "sha256:536866a4b4b0d72d362be991c6339f88cb67526c43786cd05e73408e4aeaa592"
+        }
+      ]
+    },
     {
       "tag_name": "movies-v0.7.6",
       "assets": [
