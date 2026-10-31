@@ -38,7 +38,8 @@ function service() {
         url: require('node:url'), path: require('node:path'), crypto,
         fs: { writeFileSync: () => { throw Error('Offline harness denies filesystem writes'); }, unlinkSync: () => {} },
         './sdb.js': {}, './signer.js': { ready: true }, './zip.js': {},
-        './catalog.js': catalogTrust, './catalog-key.js': 'unused public-key boundary', './personal.js': personal()
+        './catalog.js': catalogTrust, './catalog-key.js': 'unused public-key boundary', './personal.js': personal(),
+        './personal-source.js': require('../service-src/personal-source.js'), './personal-key.js': require('../service-src/personal-key.js')
     };
     const context = vm.createContext({ module: { exports: {} }, Buffer, process: { env: {}, version: 'offline', arch: 'fixture' }, console: { log: () => {} },
         __dirname: '/fixture/A2STVStore/res/wgt/service', require: name => {
@@ -89,10 +90,10 @@ test('generated UI metadata, service metadata and bundled service contain the sa
 });
 test('Store version increases while application/service identity and Tizen minimum stay unchanged', () => {
     const xml = fs.readFileSync(path.join(root, 'tizen-app/config.xml'), 'utf8');
-    assert.match(xml, /<widget\b[^>]*\bversion="0\.4\.3"/);
+    assert.match(xml, /<widget\b[^>]*\bversion="0\.5\.0"/);
     assert.match(xml, /<tizen:application id="A2STVStore\.Store" package="A2STVStore" required_version="3\.0"/);
     assert.match(xml, /<tizen:service id="A2STVStore\.sdbservice"/);
-    assert.match(fs.readFileSync(path.join(root, 'tizen-app/js/app.js'), 'utf8'), /var VERSION = '0\.4\.3-qh9'/);
+    assert.match(fs.readFileSync(path.join(root, 'tizen-app/js/app.js'), 'utf8'), /var VERSION = '0\.5\.0-qh10'/);
 });
 test('bundled extension retains all three pins and verified upstream entries without mutating either input', () => {
     const upstream = { schemaVersion: 1, generatedAt: '2026-10-30T00:00:00Z', providers: [{ id: 'fixture-upstream', releases: [{ assets: [{ browser_download_url: 'https://fixture.invalid/upstream.wgt', digest: 'sha256:' + 'a'.repeat(64) }] }] }] };
@@ -105,11 +106,11 @@ test('bundled extension retains all three pins and verified upstream entries wit
 test('personal pins reject wrong origins, malformed hashes and conflicts with verified upstream', () => {
     for (const url of ['http://github.com/tqh180581/qhsamsung/releases/download/x/a.wgt', 'https://github.com/other/repo/releases/download/x/a.wgt', 'https://fixture.invalid/a.wgt']) {
         const bad = copy(metadata); bad.releases[0].assets[0].browser_download_url = url;
-        assert.throws(() => personal(bad).merge(null), /Invalid bundled personal package/);
+        assert.throws(() => personal(bad).merge(null), /Invalid personal package/);
     }
     for (const value of ['', 'sha256:1234', 'md5:' + digest]) {
         const bad = copy(metadata); bad.releases[0].assets[0].digest = value;
-        assert.throws(() => personal(bad).merge(null), /Invalid bundled personal package/);
+        assert.throws(() => personal(bad).merge(null), /Invalid personal package/);
     }
     assert.throws(() => personal().merge({ catalog: { providers: [] }, index: { [download]: 'b'.repeat(64) } }), /conflicts with verified catalog/);
     assert.throws(() => catalogTrust.verify(Buffer.from('{"providers":[]}'), 'unused'), /not signed/);

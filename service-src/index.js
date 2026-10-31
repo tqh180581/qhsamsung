@@ -19,6 +19,8 @@ var zip = require('./zip.js');
 var catalogTrust = require('./catalog.js');
 var CATALOG_KEY = require('./catalog-key.js');
 var personalCatalog = require('./personal.js');
+var personalSource = require('./personal-source.js');
+var PERSONAL_KEY = require('./personal-key.js');
 
 var PORT = 8077;
 // Signed by the Apps2Samsung catalog workflow; see catalog.js for why the content is checked
@@ -90,19 +92,28 @@ function ownIp() {
 // HTTPS without certificate validation: the TV's CA store is too old for today's chains, so
 // nothing fetched here is trusted for where it came from. The catalog is trusted through its
 // signature and a package through the hash the catalog gives it (catalog.js).
-function get(u, cb, hops) {
+function get(u, cb, hops, maxBytes, deadline) {
     hops = hops || 0;
+    maxBytes = maxBytes || 5 * 1024 * 1024;
+    deadline = deadline || Date.now() + 30000;
     if (hops > 5) return cb(new Error('too many redirects for ' + u));
+    if (Date.now() >= deadline) return cb(new Error('catalog request timed out'));
+    var done = false, timer;
+    function finish(err, data) { if (done) return; done = true; clearTimeout(timer); cb(err, data); }
     var o = url.parse(u), secure = o.protocol === 'https:';
     var opts = { protocol: o.protocol, hostname: o.hostname, port: o.port || (secure ? 443 : 80), path: o.path,
                  headers: { 'User-Agent': 'Apps2Samsung-TV-Store' } };
     if (secure) opts.rejectUnauthorized = false;
     var req = (secure ? https : http).get(opts, function (res) {
-        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) { res.resume(); return get(url.resolve(u, res.headers.location), cb, hops + 1); }
-        if (res.statusCode !== 200) { res.resume(); return cb(new Error('HTTP ' + res.statusCode + ' for ' + u)); }
-        var chunks = []; res.on('data', function (d) { chunks.push(d); }); res.on('end', function () { cb(null, Buffer.concat(chunks)); });
+        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) { res.resume(); done = true; clearTimeout(timer); return get(url.resolve(u, res.headers.location), cb, hops + 1, maxBytes, deadline); }
+        if (res.statusCode !== 200) { res.resume(); return finish(new Error('HTTP ' + res.statusCode + ' for ' + u)); }
+        var chunks = [], size = 0;
+        res.on('data', function (d) { size += d.length; if (size > maxBytes) { finish(new Error('catalog response is too large')); req.abort(); return; } chunks.push(d); });
+        res.on('error', finish); res.on('aborted', function () { finish(new Error('catalog response was interrupted')); });
+        res.on('end', function () { finish(null, Buffer.concat(chunks)); });
     });
-    req.on('error', cb); req.setTimeout(30000, function () { req.abort(); });
+    timer = setTimeout(function () { finish(new Error('catalog request timed out')); req.abort(); }, Math.max(1, deadline - Date.now()));
+    req.on('error', finish); req.setTimeout(30000, function () { finish(new Error('catalog request timed out')); req.abort(); });
 }
 
 // get() to a file, hashing on the way: cb(err, { size, sha256 }). A package never sits in memory.
@@ -143,6 +154,15 @@ function install(entry, cb) {
         if (!cat.index.hasOwnProperty(downloadUrl)) return cb(coded('NOT_IN_CATALOG', 'this download is not in the signed catalog'));
         var want = cat.index[downloadUrl];
         if (!want) return cb(coded('NO_HASH', 'the catalog has no hash for this file, so the TV cannot check it; install it from Apps2Samsung on a phone or PC'));
+        var trusted = cat.personalEntries && cat.personalEntries[downloadUrl];
+        if (trusted) {
+            if ((entry.appId && entry.appId !== trusted.appId) || (entry.packageId && entry.packageId !== trusted.packageId))
+                return cb(coded('APP_ID_MISMATCH', 'the app identity does not match the verified personal catalog'));
+            entry = { url: trusted.url, file: trusted.file, appId: trusted.appId, packageId: trusted.packageId };
+            remoteName = trusted.file.replace(/[^A-Za-z0-9._-]/g, '_');
+        }
+        if ((entry.appId && !/^[A-Za-z0-9_.-]+$/.test(entry.appId)) || (entry.packageId && !/^[A-Za-z0-9_]+$/.test(entry.packageId)))
+            return cb(coded('APP_ID_MISMATCH', 'invalid app identity'));
         if (!DATA_DIR) return cb(new Error('the service has no folder it can write to'));
         var base = path.join(DATA_DIR, 'job-' + Date.now()), inFile = base + '.in.wgt', outFile = base + '.signed.wgt';
         function clean(err, r) { [inFile, outFile].forEach(function (f) { try { fs.unlinkSync(f); } catch (e) {} }); cb(err, r); }
@@ -196,30 +216,39 @@ function signAndInstall(entry, remoteName, inFile, outFile, cb) {
 // 30). A download URL is installable only when this lists it.
 // Requests that arrive while a fetch is running wait for that one.
 var CATALOG_WAITING = null;
+var PERSONAL_CACHE = DATA_DIR ? path.join(DATA_DIR, 'qhsamsung-personal-catalog.signed') : null;
+var loadPersonal = personalSource.create({
+    key: PERSONAL_KEY,
+    fetch: function (u, cb) { get(u, cb, 0, 2 * 1024 * 1024); },
+    read: function () { return PERSONAL_CACHE ? fs.readFileSync(PERSONAL_CACHE) : null; },
+    write: function (bytes) {
+        if (!PERSONAL_CACHE) throw new Error('no writable catalog cache');
+        fs.writeFileSync(PERSONAL_CACHE + '.tmp', bytes);
+        fs.renameSync(PERSONAL_CACHE + '.tmp', PERSONAL_CACHE);
+    },
+    log: log
+});
 function withCatalog(cb, fresh) {
     if (CATALOG && !fresh && Date.now() - CATALOG.at < 10 * 60 * 1000) return cb(null, CATALOG);
     if (CATALOG_WAITING) return CATALOG_WAITING.push(cb);
     CATALOG_WAITING = [cb];
     function done(err, cat) { var w = CATALOG_WAITING; CATALOG_WAITING = null; w.forEach(function (f) { f(err, cat); }); }
-    get(CATALOG_URL, function (err, buf) {
-        if (err) {
-            // An unavailable upstream never authorizes arbitrary downloads. Only the exact
-            // personal packages pinned in this signed application remain available.
-            var local;
-            try { local = personalCatalog.merge(null); } catch (e) { return done(e); }
-            local.at = Date.now(); CATALOG = local;
-            log('catalog: upstream unavailable; using bundled personal packages only');
-            return done(null, local);
-        }
+    var pending = 2, upstream = null, personal = null, status = null, failure = null;
+    function received() {
+        if (--pending) return;
+        if (failure) return done(failure);
         var cat;
-        try { cat = catalogTrust.verify(buf, CATALOG_KEY); }
-        catch (e) { log('catalog: ' + e.message); return done(e); }
-        try { cat = personalCatalog.merge(cat); }
-        catch (e) { return done(e); }
+        try { cat = personalCatalog.merge(upstream, personal, status); } catch (e) { return done(e); }
         cat.at = Date.now(); CATALOG = cat;
-        log('catalog: signature ok, generated ' + cat.catalog.generatedAt + ', ' + Object.keys(cat.index).length + ' files');
+        log('catalog: personal ' + status.source + ', ' + Object.keys(cat.index).length + ' verified files');
         done(null, cat);
+    }
+    get(CATALOG_URL, function (err, buf) {
+        if (err) log('catalog: community unavailable; personal catalog remains available');
+        else { try { upstream = catalogTrust.verify(buf, CATALOG_KEY); } catch (e) { failure = e; } }
+        received();
     });
+    loadPersonal(function (err, provider, source) { if (err) failure = err; personal = provider; status = source; received(); });
 }
 
 // The signing certificate a head hands over once (see #844): author/distributor key+cert as PEM
@@ -256,7 +285,7 @@ http.createServer(function (req, res) {
     if (route === '/ping') return json(res, 200, { ok: true, service: 'tv-store', ownIp: ownIp(), logUrl: 'http://' + ownIp() + ':' + PORT + '/log.txt', signerReady: signer.ready, certReady: haveCerts(),
         certFile: CERT_FILE, certError: CERT_ERROR, node: process.version });
     if (route === '/logs') return json(res, 200, { logs: LOGS });
-    if (route === '/catalog') return withCatalog(function (err, cat) { if (err) return json(res, 502, { ok: false, error: err.message }); cors(res, 200, 'application/json'); res.end(cat.payload); });
+    if (route === '/catalog') return withCatalog(function (err, cat) { if (err) return json(res, 502, { ok: false, error: err.message }); cors(res, 200, 'application/json'); res.end(cat.payload); }, url.parse(req.url, true).query.fresh === '1');
     if (route === '/cert' && req.method === 'POST') return body(req, function (err, b) {
         if (err || !b || !b.authorKeyPem || !b.authorCertPem || !b.distributorKeyPem || !b.distributorCertPem)
             return json(res, 400, { ok: false, error: 'need { authorKeyPem, authorCertPem, distributorKeyPem, distributorCertPem }' });

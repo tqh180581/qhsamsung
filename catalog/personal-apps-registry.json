@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "repository": "tqh180581/qhsamsung",
+  "apps": [
+    {
+      "name": "Kosovo SamsungTV",
+      "group": "Kosovo SamsungTV",
+      "category": "iptv",
+      "description": "KOSOVO PANEL, tự nhận model và phiên bản ứng dụng. Chọn Install hoặc Update; cần tài khoản dịch vụ riêng.",
+      "repo": "tqh180581/qhsamsung",
+      "app_id": "KsvTv2019A.KosovoTV",
+      "package_id": "KsvTv2019A",
+      "min_tizen_version": "5.0"
+    }
+  ]
+}
