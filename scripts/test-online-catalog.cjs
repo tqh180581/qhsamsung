@@ -96,3 +96,65 @@ test('persisted high watermark blocks older remote catalog even after cached cop
     const r = await load((u, cb) => cb(null, signed(catalog('0.8.3', now))), saved);
     assert.equal(r.status.source, 'bundled'); assert.match(r.status.error, /rollback/); assert.equal(r.writes.length, 0);
 });
+
+function serviceHarness(extra = {}) {
+    const dependencies = {
+        http: { createServer: () => ({ listen: () => {} }) }, https: {},
+        os: { networkInterfaces: () => ({}), tmpdir: () => '/fixture' },
+        url: require('node:url'), path, crypto,
+        fs: { writeFileSync: () => { throw Error('No writes in offline harness'); }, unlinkSync: () => {} },
+        './sdb.js': {}, './signer.js': {}, './zip.js': {}, './catalog.js': trust,
+        './catalog-key.js': 'unused-key', './personal.js': personal,
+        './personal-source.js': source, './personal-key.js': publicKey, ...extra.dependencies
+    };
+    const context = vm.createContext({ Buffer, module: { exports: {} }, console: { log: () => {} },
+        process: { env: {}, version: 'offline', arch: 'fixture' }, __dirname: '/fixture/A2STVStore/res/wgt/service',
+        setTimeout, clearTimeout, ...extra.globals, require: name => {
+            if (!Object.hasOwn(dependencies, name)) throw Error('Unexpected dependency ' + name);
+            return dependencies[name];
+        } });
+    vm.runInContext(fs.readFileSync(path.join(__dirname, '../service-src/index.js'), 'utf8'), context);
+    context.DATA_DIR = '/fixture';
+    return context;
+}
+test('service refresh bypasses cache and personal catalog survives upstream network outage, not invalid upstream signatures', async () => {
+    const c = serviceHarness(), verified = personal.verify(signed(catalog()), publicKey, now);
+    let calls = 0;
+    c.get = (url, cb) => { calls++; cb(Error('community offline')); };
+    c.loadPersonal = cb => cb(null, verified, { source: 'online' });
+    const get = fresh => new Promise(resolve => c.withCatalog((error, value) => resolve({ error, value }), fresh));
+    assert.equal((await get()).value.catalog.providers[0].catalog.apps[0].version, '0.8.3');
+    await get(); assert.equal(calls, 1);
+    await get(true); assert.equal(calls, 2);
+    c.get = (url, cb) => cb(null, Buffer.from('unsigned upstream response'));
+    assert.match((await get(true)).error.message, /not signed/);
+});
+test('install uses verified personal identity and refuses spoofed IDs before download or signing', async () => {
+    const c = serviceHarness(), verified = personal.verify(signed(catalog()), publicKey, now), merged = personal.merge(null, verified);
+    const asset = verified.provider.releases[0].assets[0];
+    c.withCatalog = cb => cb(null, merged);
+    let downloads = 0, installed;
+    c.getToFile = (url, file, cb) => { downloads++; cb(null, { size: asset.size, sha256: 'a'.repeat(64) }); };
+    c.signAndInstall = (entry, name, input, output, cb) => { installed = entry; cb(null, {}); };
+    const install = entry => new Promise(resolve => c.install(entry, error => resolve(error)));
+    assert.equal((await install({ url: asset.browser_download_url, appId: 'Other.App' })).code, 'APP_ID_MISMATCH');
+    assert.equal(downloads, 0);
+    assert.equal(await install({ url: asset.browser_download_url, file: 'untrusted-ui-name.wgt' }), null);
+    assert.equal(installed.appId, 'KsvTv2019A.KosovoTV'); assert.equal(installed.file, asset.name);
+});
+test('catalog fetch has an absolute deadline even while data trickles, and completes only once', () => {
+    const { EventEmitter } = require('node:events');
+    const response = new EventEmitter(), request = new EventEmitter(), timers = [];
+    response.statusCode = 200; response.headers = {};
+    request.setTimeout = () => {};
+    let aborts = 0, handler;
+    request.abort = () => { aborts++; request.emit('error', Error('aborted')); };
+    const c = serviceHarness({ dependencies: { https: { get: (opts, cb) => { handler = cb; return request; } } },
+        globals: { setTimeout: fn => { timers.push(fn); return timers.length; }, clearTimeout: () => {} } });
+    let calls = 0, result;
+    c.get('https://fixture.invalid/catalog', error => { calls++; result = error; });
+    handler(response); response.emit('data', Buffer.from('a')); response.emit('data', Buffer.from('b'));
+    assert.equal(calls, 0); timers[0]();
+    assert.match(result.message, /timed out/); assert.equal(aborts, 1);
+    response.emit('end'); assert.equal(calls, 1);
+});
