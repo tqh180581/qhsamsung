@@ -11,6 +11,51 @@
       "app_id": "KsvTv2019A.KosovoTV",
       "package_id": "KsvTv2019A",
       "min_tizen_version": "5.0"
+    },
+    {
+      "name": "TizenTube chính thức (Tizen 4–5.5)",
+      "group": "TizenTube chính thức (Tizen 4–5.5)",
+      "category": "streaming",
+      "license": "GPL-3.0-only",
+      "description": "TizenTube Old chính thức: YouTube có chặn quảng cáo và SponsorBlock. Bản dành cho Tizen 4.0, 5.0 và 5.5; cần certificate phù hợp cho background service. Chưa nghiệm thu trên từng model TV. Nguồn: reisxd/TizenTube, GPL-3.0.",
+      "repo": "tqh180581/qhsamsung",
+      "app_id": "xvvl3S1TT1.TizenTubeStandalone",
+      "package_id": "xvvl3S1TT1",
+      "min_tizen_version": "4.0",
+      "upstream_repo": "reisxd/TizenTube",
+      "upstream_release": "v2.1.1",
+      "upstream_commit": "893b663d35efa558d8bdf9f54f0c4f9a31ab6a07",
+      "upstream_source": "https://github.com/reisxd/TizenTube/archive/893b663d35efa558d8bdf9f54f0c4f9a31ab6a07.zip"
+    },
+    {
+      "name": "Litefin Legacy (Tizen 4+)",
+      "group": "Litefin Legacy (Tizen 4+)",
+      "category": "media",
+      "license": "MPL-2.0",
+      "description": "Client Litefin Legacy cho thư viện Jellyfin/Emby, dành cho Tizen 4.0 trở lên. Cần server và tài khoản của bạn; codec/phát nội dung phụ thuộc TV và server. Giữ bản Legacy để hỗ trợ TV đời cũ. Nguồn: MoazSalem/litefin, MPL-2.0.",
+      "repo": "tqh180581/qhsamsung",
+      "app_id": "LitefinApp.Litefin",
+      "package_id": "LitefinApp",
+      "min_tizen_version": "4.0",
+      "upstream_repo": "MoazSalem/litefin",
+      "upstream_release": "v2.0.20",
+      "upstream_commit": "299e87e4e83cff92e95d7b94dfa471bfac59efca",
+      "upstream_source": "https://github.com/MoazSalem/litefin/archive/299e87e4e83cff92e95d7b94dfa471bfac59efca.zip"
+    },
+    {
+      "name": "Moonlight NaCl (Tizen 4–6)",
+      "group": "Moonlight NaCl (Tizen 4–6)",
+      "category": "games",
+      "license": "GPL-3.0",
+      "description": "Stream game từ PC chạy Sunshine lên TV Tizen 4.0–6.0. Có hỗ trợ nút Back/Play-Pause của OneRemote; nên bắt đầu ở 1080p. Bản upstream v1.0.0 có phiên bản WGT 0.9.2. Không dành cho Tizen mới đã bỏ NaCl. Nguồn: brornski/moonlight-samsung-tv, GPL-3.0.",
+      "repo": "tqh180581/qhsamsung",
+      "app_id": "ChqHQExU28.MoonlightNaCl",
+      "package_id": "ChqHQExU28",
+      "min_tizen_version": "4.0",
+      "upstream_repo": "brornski/moonlight-samsung-tv",
+      "upstream_release": "v1.0.0",
+      "upstream_commit": "eccc9956bf3d04cd7f1282fb6bd68b4a010b74f0",
+      "upstream_source": "https://github.com/brornski/moonlight-samsung-tv/archive/eccc9956bf3d04cd7f1282fb6bd68b4a010b74f0.zip"
     }
   ]
 }

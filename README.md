@@ -5,9 +5,10 @@ Kho ứng dụng cá nhân cho TV Samsung Tizen tại `tqh180581/qhsamsung`.
 ## Bản 0.5.0-qh10
 
 - Tên hiển thị **QHSamsung · Personal Store**, phiên bản WGT `0.5.0`.
-- Danh sách cộng đồng vẫn dùng nguồn Apps2Samsung đã ký và khóa công khai gốc. Bản nhập trong repository gồm 119 nhóm ứng dụng, 148 gói/biến thể (`community-743`); xem [danh sách ứng dụng](catalog/APPS.md).
+- Danh sách cộng đồng vẫn dùng nguồn Apps2Samsung đã ký và khóa công khai gốc. Bản nhập trong repository gồm 123 nhóm ứng dụng, 154 gói/biến thể (`community-755`); xem [danh sách ứng dụng](catalog/APPS.md).
 - Danh sách cá nhân có nguồn trực tuyến được ký riêng. Release mới của ứng dụng đã đăng ký được nhận diện bằng định danh và phiên bản trong `config.xml` của WGT, kèm kích thước và SHA-256 thực tế. **Cập nhật ứng dụng cá nhân không cần build lại Store.**
 - KOSOVO PANEL / Kosovo SamsungTV đã được đăng ký; metadata 0.8.2 cùng các bản cũ nằm trong gói làm nguồn dự phòng. Xem [ứng dụng cá nhân](catalog/PERSONAL-APPS.md).
+- Danh mục cá nhân trực tuyến bổ sung TizenTube Old chính thức 2.1.1 (Tizen 4–5.5), Litefin Legacy 2.0.20 (Tizen 4+) và Moonlight NaCl 0.9.2 (Tizen 4–6). Store vẫn ở 0.5.0-qh10; chỉ cần làm mới danh mục. Xem [bộ app phổ biến](catalog/POPULAR-APPS.md) và [nguồn/giấy phép](catalog/THIRD-PARTY-APPS.md).
 - Bộ ký Samsung, SDB, ZIP và khóa tin cậy Apps2Samsung được giữ từ nền `f74741a6e8bb2428d77164e741d7aa04780d387b`. Mã dịch vụ có thể chỉnh sửa trong `service-src/`.
 
 Bản build trong repository chưa chứng minh đã ký, đã cài hay chạy thành công trên TV thật. Gói `dist/QHSamsung.wgt` là gói unsigned để ký bằng chứng chỉ tác giả đang dùng.

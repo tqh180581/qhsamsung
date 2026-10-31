@@ -1,5 +1,19 @@
 # Ứng dụng cá nhân QHSamsung
 
+## Danh mục trực tuyến cho Store 0.5.0-qh10
+
+Ngoài KOSOVO PANEL 0.8.2, danh mục trực tuyến bổ sung ba app phổ biến trong phạm vi Tizen 4.0 trở lên:
+
+| Ứng dụng | Phiên bản WGT | Phạm vi lựa chọn | Nhóm |
+|---|---|---|---|
+| TizenTube chính thức (Old) | 2.1.1 | Tizen 4.0–5.5 | Streaming |
+| Litefin Legacy | 2.0.20 | Tizen 4.0+ | Media servers & players |
+| Moonlight NaCl | 0.9.2 (upstream release v1.0.0) | Tizen 4.0–6.0 | Games & emulators |
+
+Mở Store → **Settings → Refresh app catalog** để nhận danh sách. Không cần cài lại hoặc nâng phiên bản Store cho lần bổ sung này. Mã định danh và manifest gốc được giữ nguyên; yêu cầu Tizen 4.0 trong registry là phạm vi tuyển chọn, không sửa yêu cầu trong WGT gốc. Chưa nghiệm thu trên từng TV.
+
+Các WGT mới, source archive và giấy phép nằm trong [release apps-tizen4plus-2026-10-31](https://github.com/tqh180581/qhsamsung/releases/tag/apps-tizen4plus-2026-10-31). Xem [hướng dẫn ứng dụng](POPULAR-APPS.md), [nguồn và giấy phép](THIRD-PARTY-APPS.md). Bảng KOSOVO dưới đây mô tả nguồn dự phòng được đóng sẵn trong Store, không phải toàn bộ danh mục trực tuyến.
+
 QHSamsung **0.5.0-qh10** đọc danh sách cá nhân đã ký từ nguồn cố định:
 
 `https://raw.githubusercontent.com/tqh180581/qhsamsung/personal-catalog/catalog/personal.json.signed`

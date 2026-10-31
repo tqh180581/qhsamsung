@@ -57,7 +57,7 @@ async function run() {
   });
   const doc = '# Ứng dụng QHSamsung\n\nNguồn: '+summary.sourceRepository+' · Bản '+summary.release+'\n\n'+summary.apps+' nhóm ứng dụng, '+summary.variants+' gói/biến thể. Tệp cài vẫn tải từ kho gốc. Không phải tất cả ứng dụng tương thích Tizen 5.0.\n\n| Ứng dụng | Phiên bản | Nhóm | Gói | Tải |\n|---|---|---|---|---|\n'+rows.join('\n')+'\n';
   fs.writeFileSync(path.join(dir,'APPS.md'),doc);
-  if (fs.existsSync(personalFile)) fs.appendFileSync(path.join(dir,'APPS.md'),'\n## Ứng dụng cá nhân\n\nXem [danh sách cá nhân](PERSONAL-APPS.md). Gói riêng tư cần tải và cài từ máy tính có quyền truy cập.\n');
+  if (fs.existsSync(personalFile)) fs.appendFileSync(path.join(dir,'APPS.md'),'\n## Ứng dụng cá nhân\n\nXem [danh sách cá nhân](PERSONAL-APPS.md) và [bộ app phổ biến cho Tizen 4+](POPULAR-APPS.md). App cá nhân hiện tại được phân phối qua danh mục trực tuyến riêng của QHSamsung.\n');
   console.log(JSON.stringify(summary,null,2));
 }
 run().catch(err => {console.error(err.message);process.exitCode=1;});
