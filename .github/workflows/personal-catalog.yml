@@ -1,0 +1,80 @@
+name: Publish personal app catalog
+
+on:
+  release:
+    types: [published, edited]
+  workflow_dispatch:
+  schedule:
+    # Release uploads made with GITHUB_TOKEN do not trigger another workflow.
+    - cron: '17,47 * * * *'
+  push:
+    branches: [main]
+    paths:
+      - catalog/personal-apps-registry.json
+      - scripts/publish-personal-catalog.cjs
+      - scripts/test-catalog-publisher.cjs
+      - service-src/personal-key.js
+      - service-src/personal.js
+      - service-src/catalog.js
+      - service-src/zip.js
+      - .github/workflows/personal-catalog.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: qhsamsung-personal-catalog
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test publisher without network or production keys
+        run: node --test scripts/test-catalog-publisher.cjs
+      - name: Read previously published catalog
+        shell: bash
+        run: |
+          if git ls-remote --exit-code --heads origin personal-catalog > "$RUNNER_TEMP/catalog-head"; then
+            git fetch origin personal-catalog:refs/remotes/origin/personal-catalog
+            git show origin/personal-catalog:catalog/personal.json.signed > "$RUNNER_TEMP/personal-previous.json.signed"
+          else
+            status=$?
+            if [ "$status" -ne 2 ]; then exit "$status"; fi
+          fi
+      - name: Verify release manifests and sign the catalog
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          PERSONAL_CATALOG_PRIVATE_KEY: ${{ secrets.PERSONAL_CATALOG_PRIVATE_KEY }}
+        run: |
+          args=(--output "$RUNNER_TEMP/qhsamsung-catalog")
+          if [ -f "$RUNNER_TEMP/personal-previous.json.signed" ]; then
+            args+=(--previous "$RUNNER_TEMP/personal-previous.json.signed")
+          fi
+          node scripts/publish-personal-catalog.cjs "${args[@]}"
+      - name: Publish only catalog files to the feed branch
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          if git show-ref --verify --quiet refs/remotes/origin/personal-catalog; then
+            git switch -c personal-catalog --track origin/personal-catalog
+          else
+            git switch -c personal-catalog main
+          fi
+          mkdir -p catalog
+          cp "$RUNNER_TEMP/qhsamsung-catalog/personal.json" catalog/personal.json
+          cp "$RUNNER_TEMP/qhsamsung-catalog/personal.json.signed" catalog/personal.json.signed
+          git add -- catalog/personal.json catalog/personal.json.signed
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m 'Refresh signed personal app catalog'
+          git push origin HEAD:personal-catalog

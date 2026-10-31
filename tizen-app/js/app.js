@@ -29,7 +29,7 @@
     // TV's current IP and loopback too, and keeps whichever answers.
     var BASE = 'http://127.0.0.1:8077';
     var KOFI = 'https://ko-fi.com/patrickst';
-    var VERSION = '0.4.3-qh9';
+    var VERSION = '0.5.0-qh10';
     var KEY = { LEFT: 37, UP: 38, RIGHT: 39, DOWN: 40, ENTER: 13, RETURN: 10009, ESC: 27, BACK: 8 };
 
     // What the manifest providers are called; resolved.json carries only their ids.
@@ -67,6 +67,7 @@
     }
     var ready = null;          // the service's /ping
     var problem = null;        // { title, text } when the service or the catalog failed
+    var personalStatus = { source: 'bundled' };
     var loading = true;
     var view = 'install';      // 'install' | 'tv'
     var chip = 'all';          // 'all' or a category id
@@ -224,10 +225,9 @@
             }
             return byKey[key];
         }
-        // Personal entries ship inside the signed application, for display only.
-        // The service still installs only URLs in its cryptographically verified catalog.
-        var providers = (cat.providers || []).filter(function (p) { return p.id !== 'qhsamsung-personal'; });
-        if (window.QH_PERSONAL_CATALOG) providers.push(window.QH_PERSONAL_CATALOG);
+        // The service supplies the verified online, saved or bundled personal provider.
+        // Never replace it with the UI's stale bundled metadata.
+        var providers = cat.providers || [];
         providers.forEach(function (p) {
             // QHSamsung imports this community repository only.
             if (p.id !== 'tizen-community' && p.id !== 'qhsamsung-personal') return;
@@ -584,12 +584,14 @@
             if (!sheet.all && x.variants.length > 4) h += '<span class="link f" tabindex="0" data-k="allvars" data-act="allvars">Show all ' + x.variants.length + ' variants ›</span>';
         }
 
+        var older = st.installed && newer(st.version, v.version);
         var label = st.installed && st.known && st.variant === sheet.v ? (st.update ? 'Update to v' + v.version : 'Reinstall') : (st.installed ? 'Install this variant' : 'Install on this TV');
+        if (older) h += '<div class="notice">The catalog has an older version than the app on this TV. Refresh the app catalog to check for a newer release.</div>';
         if (v.needsHead) h += '<div class="notice">' + esc(x.name + ' ' + v.needsHead + ', which this TV cannot do yet. Install it with Apps2Samsung on a phone or PC.') + '</div>';
         else if (!armed()) h += '<div class="notice">Not armed yet. Open this TV’s Toolbox in Apps2Samsung 3.0 or newer on your phone or PC and press Arm TV-Store once; after that every install runs here.</div>';
-        var can = !v.needsHead && armed() && !(job && job.running);
+        var can = !older && !v.needsHead && armed() && !(job && job.running);
         h += '<div class="sfoot"><div class="btns"><button class="btn primary grow f" data-k="install" data-act="install"' + (can ? (x.variants.length > 1 ? '' : ' data-default') : ' disabled') + '>'
-            + esc(v.needsHead ? 'Install from a phone or PC' : job && job.running ? 'Another install is running' : label) + '</button>';
+            + esc(older ? 'Older version unavailable' : v.needsHead ? 'Install from a phone or PC' : job && job.running ? 'Another install is running' : label) + '</button>';
         if (st.installed && x.variants[st.variant].appId) h += '<button class="btn f" data-k="open" data-act="open">Open</button>';
         if (st.installed && !st.known && x.variants.length > 1) h = h.replace('<div class="sfoot">', '<div class="notice">' + esc('Your TV has ' + x.name + ' v' + st.version + ', but every build of it uses the same package, so TV-Store cannot tell which one. Pick yours above to reinstall or update it.') + '</div><div class="sfoot">');
         h += '</div><div class="hint">' + (can ? 'Takes about a minute. RETURN goes back to the store.' : 'RETURN goes back to the store.') + '</div></div>';
@@ -653,7 +655,10 @@
             + '<div class="btns" style="margin-top:16px"><button class="btn primary grow f" data-k="adultyes" data-act="adultyes" data-default>I am 18 or older</button><button class="btn f" data-k="adultno" data-act="adultno">Cancel</button></div>';
         h += '<div class="table kv"><div class="trow"><span class="k">Signing certificate</span><span class="v">' + (armed() ? 'handed over' : 'not yet') + '</span></div>'
             + '<div class="trow"><span class="k">Catalog</span><span class="v">' + esc(catalogApps.length + ' apps, signature checked') + '</span></div>'
+            + '<div class="trow"><span class="k">Personal apps</span><span class="v">' + esc(personalStatus.source === 'online' ? 'Online catalog' : personalStatus.source === 'cache' ? 'Saved verified catalog' : 'Bundled fallback') + '</span></div>'
+            + (personalStatus.generatedAt ? '<div class="trow"><span class="k">Catalog published</span><span class="v">' + esc(personalStatus.generatedAt) + '</span></div>' : '')
             + '<div class="trow"><span class="k">TV-Store</span><span class="v">v' + VERSION + (ready && ready.node ? ' · Node ' + esc(ready.node) : '') + '</span></div></div>';
+        h += '<div class="btns"><button class="btn primary grow f" data-k="refreshcatalog" data-act="refreshcatalog">Refresh app catalog</button></div>';
         return h + logBlock();
     }
 
@@ -666,6 +671,7 @@
     function startInstall(x, vIdx) {
         if (job && job.running) return;
         var v = x.variants[vIdx], st = state(x);
+        if (st.installed && newer(st.version, v.version)) return;
         job = { app: x, v: v, vIdx: vIdx, update: st.installed && st.known && st.variant === vIdx, running: true, finished: false, ok: false, step: 0, bytes: 0, line: '', error: null, started: Date.now() };
         if (sheet) { sheet = { mode: 'job' }; renderSheet(true); } else openSheet({ mode: 'job' });
         renderHeader();
@@ -737,6 +743,14 @@
         if ((k = el.getAttribute('data-app'))) { var x = byKey(k); if (x) openApp(x); return; }
         switch (act) {
             case 'retry': location.reload(); return;
+            case 'refreshcatalog':
+                closeSheet(); loading = true; problem = null; renderPage();
+                xhr('GET', '/catalog?fresh=1', null, function (err, cat) {
+                    loading = false;
+                    if (err) { problem = { title: 'The catalog did not load', short: 'No catalog', text: err.message + '.' }; renderPage(); focusFirst(); return; }
+                    acceptCatalog(cat); renderPage(); focusFirst();
+                });
+                return;
             case 'allvars': sheet.all = true; renderSheet(); focusKey('var:' + sheet.v); return;
             case 'install': if (!el.disabled) startInstall(sheet.app, sheet.v); return;
             case 'open': var s = state(sheet.app); launch(sheet.app.variants[s.variant].appId); return;
@@ -881,6 +895,13 @@
     // store by itself (an arm from an older head never touches this page's API).
     setInterval(function () { if (!loading && !problem && !armed()) xhr('GET', '/ping', null, function (err, res) { if (!err) setReady(res); }); }, 3000);
 
+    function acceptCatalog(cat) {
+        var community = (cat.providers || []).filter(function (p) { return p.catalog && p.catalog.categories; })[0];
+        window.__categories = community ? community.catalog.categories : {};
+        personalStatus = cat.personalCatalog || { source: 'bundled' };
+        catalogApps = build(cat); apps = visible(catalogApps); claims = null;
+    }
+
     // ---- boot -------------------------------------------------------------------------------------
     renderHeader(); renderFoot(); renderPage(); readDevice();
     startService(function (err, ping) {
@@ -891,9 +912,7 @@
             xhr('GET', '/catalog', null, function (err, cat) {
                 loading = false;
                 if (err) { problem = { title: 'The catalog did not load', short: 'No catalog', text: err.message + '.' }; renderPage(); focusFirst(); return; }
-                var community = (cat.providers || []).filter(function (p) { return p.catalog && p.catalog.categories; })[0];
-                window.__categories = community ? community.catalog.categories : {};
-                catalogApps = build(cat); apps = visible(catalogApps); claims = null;
+                acceptCatalog(cat);
                 renderPage(); focusFirst();
             });
         });

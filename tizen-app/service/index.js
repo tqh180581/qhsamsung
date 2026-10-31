@@ -590,33 +590,142 @@ defs["./personal-catalog.js"] = function (module,exports,require) {
 module.exports = {"id":"qhsamsung-personal","ok":true,"url":"https://api.github.com/repos/tqh180581/qhsamsung/releases","latestTag":"kosovo-tizen5plus-v0.8.2","catalog":{"apps":[{"name":"Kosovo SamsungTV","group":"Kosovo SamsungTV","file":"Kosovo-SamsungTV-Tizen5plus-v0.8.2.wgt","version":"0.8.2","category":"iptv","description":"KOSOVO PANEL 0.8.2 dành cho Samsung Tizen 5.0 trở lên, tự nhận model và phiên bản ứng dụng, tối ưu kết xuất thẻ Trang chủ bằng số lớp hiển thị có giới hạn. Chọn Install hoặc Update; cần tài khoản dịch vụ riêng.","repo":"tqh180581/qhsamsung","app_id":"KsvTv2019A.KosovoTV","package_id":"KsvTv2019A","min_tizen_version":"5.0","private_download":false}]},"releases":[{"tag_name":"kosovo-tizen5plus-v0.8.2","assets":[{"name":"Kosovo-SamsungTV-Tizen5plus-v0.8.2.wgt","browser_download_url":"https://github.com/tqh180581/qhsamsung/releases/download/kosovo-tizen5plus-v0.8.2/Kosovo-SamsungTV-Tizen5plus-v0.8.2.wgt","size":12330119,"digest":"sha256:45d521d7181f09d81cd23d1eed01f8db12f0edc76092c6b3bb3825f683922d88"}]},{"tag_name":"kosovo-tizen5plus-v0.8.0","assets":[{"name":"Kosovo-SamsungTV-Tizen5plus-v0.8.0.wgt","browser_download_url":"https://github.com/tqh180581/qhsamsung/releases/download/kosovo-tizen5plus-v0.8.0/Kosovo-SamsungTV-Tizen5plus-v0.8.0.wgt","size":12326565,"digest":"sha256:536866a4b4b0d72d362be991c6339f88cb67526c43786cd05e73408e4aeaa592"}]},{"tag_name":"movies-v0.7.6","assets":[{"name":"Kosovo-SamsungTV-v0.7.6.wgt","browser_download_url":"https://github.com/tqh180581/qhsamsung/releases/download/movies-v0.7.6/Kosovo-SamsungTV-v0.7.6.wgt","size":12331412,"digest":"sha256:13adae22402f6e9dc70f887300046d275ccd784c39c22e1b23188d300b9a94ca"}]}]};
 
 };
+defs["./personal-key.js"] = function (module,exports,require) {
+'use strict';
+module.exports = "-----BEGIN PUBLIC KEY-----\nMIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAoLDXrj0WPtPiKjus4Fk4\nO62nWK/fTCYK5vIDAMzZf7sdgr5e2jn6J6IyF8flPDsJ9ZnPH8/0UeFVs2naGm+Z\n/StGGRzmd4hBoLrw4m1w62GP/6c85fn8T2/vk9cE1mbkHF5IlM/g0wmzRSP0kXlD\n8blrh2jgHLIK3Of8CImDUfabtnG2Q8Vc108qsLmgg7csRYU36g02L5eakkD5jblm\ny2yMy0ogu7rXp/5IoFqQz01aQXqWqZxnxATxYactyCuRsAznW7AZwuW7SLBC8vcD\nsz1oX5vabyJ719qKd/RCO/+bjk6G8Dw6A+O4k43mvJ9c2M+9Qd4R8+Tqd4E8ER/e\nPCroAAZrnu0KtxEWnX8ORSLW5dBB0A+qt6ggMEG+xBtRql5+HiCUxrSbJ6g0SoUF\nKn2NnDEH5HSnLxK16emxtHfHgTwEmIgjW1LbqkPuldO/gZQg47m6S9+qOOZNXZ2D\nHSWvYiaV5OMy6Fd96W8Ae/khHhxdxq8W9lx0blX/ZpOLAgMBAAE=\n-----END PUBLIC KEY-----\n";
+
+};
 defs["./personal.js"] = function (module,exports,require) {
-/* Personal packages pinned inside the signed QHSamsung application.
- * Only these exact URLs and SHA-256 values may extend the verified upstream catalog.
- * Runtime requests cannot add or change entries in this list. */
+/* Personal catalogs have a separate signing key. Only the service verifies and
+ * merges them; the UI cannot extend the install allowlist. ES5 for older TVs. */
 'use strict';
 var pinned = require('./personal-catalog.js');
-var catalogTrust = require('./catalog.js');
+var trust = require('./catalog.js');
+var ID = 'qhsamsung-personal';
+var ORIGIN = /^https:\/\/github\.com\/tqh180581\/qhsamsung\/releases\/download\/[^/?#]+\/[^/?#]+\.wgt$/i;
 
-exports.merge = function (verified) {
-    var provider = JSON.parse(JSON.stringify(pinned));
-    (provider.releases || []).forEach(function (release) {
-        (release.assets || []).forEach(function (asset) {
-            if (!/^https:\/\/github\.com\/tqh180581\/qhsamsung\/releases\/download\//.test(asset.browser_download_url || '') ||
-                !/^sha256:[a-f0-9]{64}$/i.test(asset.digest || '')) {
-                throw new Error('Invalid bundled personal package');
-            }
+function version(v) {
+    if (!/^\d+\.\d+\.\d+$/.test(v || '')) throw new Error('Invalid personal app version');
+    return v.split('.').map(Number);
+}
+function compare(a, b) {
+    a = version(a); b = version(b);
+    for (var i = 0; i < 3; i++) if (a[i] !== b[i]) return a[i] > b[i] ? 1 : -1;
+    return 0;
+}
+function validate(provider, bundled) {
+    if (!provider || provider.id !== ID || !provider.catalog || !Array.isArray(provider.catalog.apps) ||
+        !provider.catalog.apps.length || provider.catalog.apps.length > 100 || !Array.isArray(provider.releases))
+        throw new Error('Invalid personal catalog');
+    var entries = {}, apps = {}, names = {}, first = provider.releases[0];
+    if (!first || !Array.isArray(first.assets)) throw new Error('Missing personal assets');
+    provider.catalog.apps.forEach(function (app) {
+        if (!/^[A-Za-z0-9_]+\.[A-Za-z0-9_.-]+$/.test(app.app_id || '') ||
+            !/^[A-Za-z0-9_]+$/.test(app.package_id || '') || /^A2STVStore$/i.test(app.package_id) ||
+            app.app_id.indexOf(app.package_id + '.') !== 0 || apps[app.app_id] || names[app.file] ||
+            !/^[^/\\]+\.wgt$/i.test(app.file || '') || !/^\d+\.\d+$/.test(app.min_tizen_version || '') ||
+            typeof app.name !== 'string' || !app.name || app.private_download === true || app.root === true || (app.flags || []).indexOf('root') >= 0)
+            throw new Error('Invalid personal app identity');
+        version(app.version);
+        if (!first.assets.some(function (asset) { return asset.name === app.file; })) throw new Error('Personal app has no current asset');
+        apps[app.app_id] = app; names[app.file] = app;
+    });
+    var count = 0;
+    provider.releases.forEach(function (release) {
+        if (!release || !Array.isArray(release.assets)) throw new Error('Invalid personal release');
+        release.assets.forEach(function (asset) {
+            if (++count > 1000 || !ORIGIN.test(asset.browser_download_url || '') ||
+                !/^sha256:[a-f0-9]{64}$/i.test(asset.digest || '') ||
+                !/^[^/\\]+\.wgt$/i.test(asset.name || '') || !isFinite(asset.size) || asset.size <= 0 || asset.size > 128 * 1024 * 1024)
+                throw new Error('Invalid personal package');
+            var app = names[asset.name];
+            // The immutable bundled baseline contains historical assets for one app.
+            if (!app && bundled && provider.catalog.apps.length === 1) app = provider.catalog.apps[0];
+            if (!app || (asset.app_id && asset.app_id !== app.app_id) ||
+                (asset.package_id && asset.package_id !== app.package_id)) throw new Error('Personal asset identity mismatch');
+            if (!bundled && asset.package_version && asset.package_version !== app.version) throw new Error('Personal asset version mismatch');
+            var entry = { url: asset.browser_download_url, file: asset.name, appId: app.app_id, packageId: app.package_id,
+                version: asset.package_version || app.version, digest: asset.digest.slice(7).toLowerCase() };
+            version(entry.version);
+            if (entries[entry.url] && JSON.stringify(entries[entry.url]) !== JSON.stringify(entry)) throw new Error('Conflicting personal asset');
+            entries[entry.url] = entry;
         });
     });
-    var source = verified ? verified.catalog : { schemaVersion: 1, providers: [] };
-    var catalog = {};
+    return entries;
+}
+function verify(buf, key, now, options) {
+    options = options || {}; now = now || Date.now();
+    var verified = trust.verify(buf, key, options.allowExpired ? 1 : now), cat = verified.catalog;
+    var at = Date.parse(cat.generatedAt);
+    if (cat.schemaVersion !== 1 || !Array.isArray(cat.providers) || cat.providers.length !== 1 || at > now + 5 * 60 * 1000)
+        throw new Error('Invalid personal catalog envelope or clock');
+    if (options.previous && at < options.previous.at) throw new Error('Personal catalog rollback rejected');
+    var provider = cat.providers[0];
+    validate(provider, false);
+    var baseline = (options.previous ? options.previous.provider.catalog.apps : []).concat(pinned.catalog.apps);
+    baseline.forEach(function (old) {
+        var current = provider.catalog.apps.filter(function (app) { return app.app_id === old.app_id; })[0];
+        if (!current || current.package_id !== old.package_id || compare(current.version, old.version) < 0)
+            throw new Error('Personal app rollback or removal rejected: ' + old.app_id);
+    });
+    return { provider: provider, at: at, bytes: buf };
+}
+function merge(verified, personal, status) {
+    var provider = JSON.parse(JSON.stringify(personal ? personal.provider : pinned));
+    var entries = validate(provider, !personal);
+    var source = verified ? verified.catalog : { schemaVersion: 1, providers: [] }, catalog = {};
     Object.keys(source).forEach(function (key) { catalog[key] = source[key]; });
-    catalog.providers = (source.providers || []).filter(function (p) { return p.id !== provider.id; }).concat([provider]);
-    var index = catalogTrust.index(catalog);
+    catalog.providers = (source.providers || []).filter(function (p) { return p.id !== ID; }).concat([provider]);
+    catalog.personalCatalog = status || { source: 'bundled', generatedAt: null };
+    var index = trust.index(catalog);
     if (verified) Object.keys(verified.index).forEach(function (u) {
         if (index[u] !== undefined && index[u] !== verified.index[u]) throw new Error('Personal package conflicts with verified catalog');
     });
-    return {catalog: catalog, payload: JSON.stringify(catalog), index: index};
+    return { catalog: catalog, payload: JSON.stringify(catalog), index: index, personalEntries: entries };
+}
+module.exports = { verify: verify, merge: merge, validate: validate, compare: compare, ID: ID };
+
+};
+defs["./personal-source.js"] = function (module,exports,require) {
+/* Network/cache orchestration kept separate so failures can be tested offline. */
+'use strict';
+var personal = require('./personal.js');
+var URL = 'https://raw.githubusercontent.com/tqh180581/qhsamsung/personal-catalog/catalog/personal.json.signed';
+var MAX_BYTES = 2 * 1024 * 1024;
+exports.URL = URL;
+exports.create = function (options) {
+    var previous = null, initialized = false;
+    var now = options.now || Date.now;
+    function init() {
+        if (initialized) return; initialized = true;
+        try {
+            var saved = options.read();
+            if (saved && saved.length <= MAX_BYTES) previous = personal.verify(saved, options.key, now(), { allowExpired: true });
+        } catch (e) { options.log('personal catalog: saved copy unavailable: ' + e.message); }
+    }
+    return function load(cb) {
+        init();
+        options.fetch(URL, function (err, bytes) {
+            var verified = null, status;
+            if (!err) {
+                try {
+                    if (!bytes || bytes.length > MAX_BYTES) throw new Error('Personal catalog is too large');
+                    verified = personal.verify(bytes, options.key, now(), { previous: previous });
+                    previous = verified;
+                    try { options.write(bytes); } catch (e) { options.log('personal catalog: could not save verified copy: ' + e.message); }
+                } catch (e) { err = e; }
+            }
+            if (verified) status = { source: 'online', generatedAt: new Date(verified.at).toISOString() };
+            else if (previous) {
+                try { verified = personal.verify(previous.bytes, options.key, now()); }
+                catch (e) { options.log('personal catalog: saved copy expired: ' + e.message); }
+                status = verified ? { source: 'cache', generatedAt: new Date(verified.at).toISOString(), error: err && err.message }
+                    : { source: 'bundled', generatedAt: null, error: err && err.message };
+            } else status = { source: 'bundled', generatedAt: null, error: err && err.message };
+            if (err) options.log('personal catalog: ' + err.message + '; using ' + status.source);
+            cb(null, verified, status);
+        });
+    };
 };
 
 };
@@ -642,6 +751,8 @@ var zip = require('./zip.js');
 var catalogTrust = require('./catalog.js');
 var CATALOG_KEY = require('./catalog-key.js');
 var personalCatalog = require('./personal.js');
+var personalSource = require('./personal-source.js');
+var PERSONAL_KEY = require('./personal-key.js');
 
 var PORT = 8077;
 // Signed by the Apps2Samsung catalog workflow; see catalog.js for why the content is checked
@@ -713,19 +824,28 @@ function ownIp() {
 // HTTPS without certificate validation: the TV's CA store is too old for today's chains, so
 // nothing fetched here is trusted for where it came from. The catalog is trusted through its
 // signature and a package through the hash the catalog gives it (catalog.js).
-function get(u, cb, hops) {
+function get(u, cb, hops, maxBytes, deadline) {
     hops = hops || 0;
+    maxBytes = maxBytes || 5 * 1024 * 1024;
+    deadline = deadline || Date.now() + 30000;
     if (hops > 5) return cb(new Error('too many redirects for ' + u));
+    if (Date.now() >= deadline) return cb(new Error('catalog request timed out'));
+    var done = false, timer;
+    function finish(err, data) { if (done) return; done = true; clearTimeout(timer); cb(err, data); }
     var o = url.parse(u), secure = o.protocol === 'https:';
     var opts = { protocol: o.protocol, hostname: o.hostname, port: o.port || (secure ? 443 : 80), path: o.path,
                  headers: { 'User-Agent': 'Apps2Samsung-TV-Store' } };
     if (secure) opts.rejectUnauthorized = false;
     var req = (secure ? https : http).get(opts, function (res) {
-        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) { res.resume(); return get(url.resolve(u, res.headers.location), cb, hops + 1); }
-        if (res.statusCode !== 200) { res.resume(); return cb(new Error('HTTP ' + res.statusCode + ' for ' + u)); }
-        var chunks = []; res.on('data', function (d) { chunks.push(d); }); res.on('end', function () { cb(null, Buffer.concat(chunks)); });
+        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) { res.resume(); done = true; clearTimeout(timer); return get(url.resolve(u, res.headers.location), cb, hops + 1, maxBytes, deadline); }
+        if (res.statusCode !== 200) { res.resume(); return finish(new Error('HTTP ' + res.statusCode + ' for ' + u)); }
+        var chunks = [], size = 0;
+        res.on('data', function (d) { size += d.length; if (size > maxBytes) { finish(new Error('catalog response is too large')); req.abort(); return; } chunks.push(d); });
+        res.on('error', finish); res.on('aborted', function () { finish(new Error('catalog response was interrupted')); });
+        res.on('end', function () { finish(null, Buffer.concat(chunks)); });
     });
-    req.on('error', cb); req.setTimeout(30000, function () { req.abort(); });
+    timer = setTimeout(function () { finish(new Error('catalog request timed out')); req.abort(); }, Math.max(1, deadline - Date.now()));
+    req.on('error', finish); req.setTimeout(30000, function () { finish(new Error('catalog request timed out')); req.abort(); });
 }
 
 // get() to a file, hashing on the way: cb(err, { size, sha256 }). A package never sits in memory.
@@ -766,6 +886,15 @@ function install(entry, cb) {
         if (!cat.index.hasOwnProperty(downloadUrl)) return cb(coded('NOT_IN_CATALOG', 'this download is not in the signed catalog'));
         var want = cat.index[downloadUrl];
         if (!want) return cb(coded('NO_HASH', 'the catalog has no hash for this file, so the TV cannot check it; install it from Apps2Samsung on a phone or PC'));
+        var trusted = cat.personalEntries && cat.personalEntries[downloadUrl];
+        if (trusted) {
+            if ((entry.appId && entry.appId !== trusted.appId) || (entry.packageId && entry.packageId !== trusted.packageId))
+                return cb(coded('APP_ID_MISMATCH', 'the app identity does not match the verified personal catalog'));
+            entry = { url: trusted.url, file: trusted.file, appId: trusted.appId, packageId: trusted.packageId };
+            remoteName = trusted.file.replace(/[^A-Za-z0-9._-]/g, '_');
+        }
+        if ((entry.appId && !/^[A-Za-z0-9_.-]+$/.test(entry.appId)) || (entry.packageId && !/^[A-Za-z0-9_]+$/.test(entry.packageId)))
+            return cb(coded('APP_ID_MISMATCH', 'invalid app identity'));
         if (!DATA_DIR) return cb(new Error('the service has no folder it can write to'));
         var base = path.join(DATA_DIR, 'job-' + Date.now()), inFile = base + '.in.wgt', outFile = base + '.signed.wgt';
         function clean(err, r) { [inFile, outFile].forEach(function (f) { try { fs.unlinkSync(f); } catch (e) {} }); cb(err, r); }
@@ -819,30 +948,39 @@ function signAndInstall(entry, remoteName, inFile, outFile, cb) {
 // 30). A download URL is installable only when this lists it.
 // Requests that arrive while a fetch is running wait for that one.
 var CATALOG_WAITING = null;
+var PERSONAL_CACHE = DATA_DIR ? path.join(DATA_DIR, 'qhsamsung-personal-catalog.signed') : null;
+var loadPersonal = personalSource.create({
+    key: PERSONAL_KEY,
+    fetch: function (u, cb) { get(u, cb, 0, 2 * 1024 * 1024); },
+    read: function () { return PERSONAL_CACHE ? fs.readFileSync(PERSONAL_CACHE) : null; },
+    write: function (bytes) {
+        if (!PERSONAL_CACHE) throw new Error('no writable catalog cache');
+        fs.writeFileSync(PERSONAL_CACHE + '.tmp', bytes);
+        fs.renameSync(PERSONAL_CACHE + '.tmp', PERSONAL_CACHE);
+    },
+    log: log
+});
 function withCatalog(cb, fresh) {
     if (CATALOG && !fresh && Date.now() - CATALOG.at < 10 * 60 * 1000) return cb(null, CATALOG);
     if (CATALOG_WAITING) return CATALOG_WAITING.push(cb);
     CATALOG_WAITING = [cb];
     function done(err, cat) { var w = CATALOG_WAITING; CATALOG_WAITING = null; w.forEach(function (f) { f(err, cat); }); }
-    get(CATALOG_URL, function (err, buf) {
-        if (err) {
-            // An unavailable upstream never authorizes arbitrary downloads. Only the exact
-            // personal packages pinned in this signed application remain available.
-            var local;
-            try { local = personalCatalog.merge(null); } catch (e) { return done(e); }
-            local.at = Date.now(); CATALOG = local;
-            log('catalog: upstream unavailable; using bundled personal packages only');
-            return done(null, local);
-        }
+    var pending = 2, upstream = null, personal = null, status = null, failure = null;
+    function received() {
+        if (--pending) return;
+        if (failure) return done(failure);
         var cat;
-        try { cat = catalogTrust.verify(buf, CATALOG_KEY); }
-        catch (e) { log('catalog: ' + e.message); return done(e); }
-        try { cat = personalCatalog.merge(cat); }
-        catch (e) { return done(e); }
+        try { cat = personalCatalog.merge(upstream, personal, status); } catch (e) { return done(e); }
         cat.at = Date.now(); CATALOG = cat;
-        log('catalog: signature ok, generated ' + cat.catalog.generatedAt + ', ' + Object.keys(cat.index).length + ' files');
+        log('catalog: personal ' + status.source + ', ' + Object.keys(cat.index).length + ' verified files');
         done(null, cat);
+    }
+    get(CATALOG_URL, function (err, buf) {
+        if (err) log('catalog: community unavailable; personal catalog remains available');
+        else { try { upstream = catalogTrust.verify(buf, CATALOG_KEY); } catch (e) { failure = e; } }
+        received();
     });
+    loadPersonal(function (err, provider, source) { if (err) failure = err; personal = provider; status = source; received(); });
 }
 
 // The signing certificate a head hands over once (see #844): author/distributor key+cert as PEM
@@ -879,7 +1017,7 @@ http.createServer(function (req, res) {
     if (route === '/ping') return json(res, 200, { ok: true, service: 'tv-store', ownIp: ownIp(), logUrl: 'http://' + ownIp() + ':' + PORT + '/log.txt', signerReady: signer.ready, certReady: haveCerts(),
         certFile: CERT_FILE, certError: CERT_ERROR, node: process.version });
     if (route === '/logs') return json(res, 200, { logs: LOGS });
-    if (route === '/catalog') return withCatalog(function (err, cat) { if (err) return json(res, 502, { ok: false, error: err.message }); cors(res, 200, 'application/json'); res.end(cat.payload); });
+    if (route === '/catalog') return withCatalog(function (err, cat) { if (err) return json(res, 502, { ok: false, error: err.message }); cors(res, 200, 'application/json'); res.end(cat.payload); }, url.parse(req.url, true).query.fresh === '1');
     if (route === '/cert' && req.method === 'POST') return body(req, function (err, b) {
         if (err || !b || !b.authorKeyPem || !b.authorCertPem || !b.distributorKeyPem || !b.distributorCertPem)
             return json(res, 400, { ok: false, error: 'need { authorKeyPem, authorCertPem, distributorKeyPem, distributorCertPem }' });
