@@ -129,6 +129,16 @@ function validateAsset(asset, release) {
 async function buildCatalog(registry, releases, downloadAsset, options = {}) {
     validateRegistry(registry);
     const latest = new Map();
+    const reusable = new Map();
+    if (options.previousBytes) {
+        const previous = readPrevious(options.previousBytes, options.publicKeyPem).providers[0];
+        for (const app of previous.catalog.apps) {
+            const asset = previous.releases[0].assets.find(item => item.name === app.file);
+            if (asset && asset.app_id === app.app_id && asset.package_id === app.package_id && asset.package_version === app.version) {
+                reusable.set(asset.browser_download_url, { app, asset });
+            }
+        }
+    }
     for (const release of releases) {
         if (release.draft || release.prerelease) continue;
         if (typeof release.tag_name !== 'string' || !Array.isArray(release.assets)) throw new Error('Invalid release metadata');
@@ -136,11 +146,26 @@ async function buildCatalog(registry, releases, downloadAsset, options = {}) {
             if (!/\.wgt$/i.test(asset.name || '') || /^QHSamsung(?:[-_.]|$)/i.test(asset.name) || /^TV-Store(?:[-_.]|$)/i.test(asset.name)) continue;
             if (asset.state && asset.state !== 'uploaded') continue;
             validateAsset(asset, release);
-            const file = await downloadAsset(asset, release);
-            if (fs.statSync(file).size !== asset.size) throw new Error('Downloaded package size does not match GitHub');
-            const hash = await hashFile(file);
-            if (asset.digest && asset.digest.toLowerCase() !== 'sha256:' + hash) throw new Error('Downloaded package hash does not match GitHub');
-            const manifest = await readManifest(file);
+            const previous = reusable.get(asset.browser_download_url);
+            let hash, manifest;
+            if (previous && previous.asset.name === asset.name && previous.asset.size === asset.size && previous.asset.digest === asset.digest) {
+                hash = asset.digest.slice(7);
+                manifest = { app_id: previous.app.app_id, package_id: previous.app.package_id, version: previous.app.version, min_tizen_version: previous.app.min_tizen_version };
+            } else {
+                let file;
+                try { file = await downloadAsset(asset, release); }
+                catch (error) {
+                    // Temporary CDN failures must not block unrelated apps.
+                    // The final registry and signed rollback checks still apply.
+                    if (!options.previousBytes || !error || error.code !== 'ASSET_TEMPORARY') throw error;
+                    console.warn('Temporarily unavailable WGT: ' + asset.name);
+                    continue;
+                }
+                if (fs.statSync(file).size !== asset.size) throw new Error('Downloaded package size does not match GitHub');
+                hash = await hashFile(file);
+                if (asset.digest && asset.digest.toLowerCase() !== 'sha256:' + hash) throw new Error('Downloaded package hash does not match GitHub');
+                manifest = await readManifest(file);
+            }
             if (manifest.app_id === STORE_APP || manifest.package_id === STORE_PACKAGE) continue;
             const known = registry.apps.find(app => app.app_id === manifest.app_id || app.package_id === manifest.package_id);
             if (!known) continue;
@@ -231,8 +256,18 @@ async function fetchReleases(fetchImpl = fetch, token) {
 }
 
 async function downloadToFile(asset, directory, fetchImpl = fetch) {
-    const response = await fetchImpl(asset.browser_download_url, { headers: { 'User-Agent': 'QHSamsung-personal-catalog' }, signal: AbortSignal.timeout(120000), redirect: 'follow' });
-    if (!response.ok || !response.body) throw new Error('WGT download failed (HTTP ' + response.status + ')');
+    const request = { headers: { 'User-Agent': 'QHSamsung-personal-catalog' }, signal: AbortSignal.timeout(120000), redirect: 'follow' };
+    let response;
+    try { response = await fetchImpl(asset.browser_download_url, request); }
+    catch (error) {
+        if (error && error.name === 'TimeoutError') error = Object.assign(new Error('WGT download timed out'), { code: 'ASSET_TEMPORARY' });
+        throw error;
+    }
+    if (!response.ok || !response.body) {
+        const error = new Error('WGT download failed (HTTP ' + response.status + ')');
+        if ([429, 500, 502, 503, 504].includes(response.status)) error.code = 'ASSET_TEMPORARY';
+        throw error;
+    }
     const final = new URL(response.url || asset.browser_download_url);
     if (final.protocol !== 'https:' || !['github.com', 'release-assets.githubusercontent.com', 'objects.githubusercontent.com'].includes(final.hostname)) throw new Error('Unexpected GitHub asset download destination');
     const filename = path.join(directory, crypto.createHash('sha256').update(asset.browser_download_url).digest('hex') + '.wgt');
@@ -261,8 +296,9 @@ async function main(argv = process.argv.slice(2)) {
     const temporary = fs.mkdtempSync(path.join(temporaryRoot, 'qhsamsung-catalog-'));
     try {
         const releases = await fetchReleases(fetch, process.env.GITHUB_TOKEN);
-        const catalog = await buildCatalog(registry, releases, asset => downloadToFile(asset, temporary));
-        const result = signCatalog(catalog, process.env.PERSONAL_CATALOG_PRIVATE_KEY, publicKeyPem, previousFile && fs.readFileSync(previousFile));
+        const previousBytes = previousFile && fs.readFileSync(previousFile);
+        const catalog = await buildCatalog(registry, releases, asset => downloadToFile(asset, temporary), { previousBytes, publicKeyPem });
+        const result = signCatalog(catalog, process.env.PERSONAL_CATALOG_PRIVATE_KEY, publicKeyPem, previousBytes);
         fs.mkdirSync(output, { recursive: true });
         fs.writeFileSync(path.join(output, 'personal.json'), JSON.stringify(result.catalog, null, 2) + '\n');
         fs.writeFileSync(path.join(output, 'personal.json.signed'), result.signed);

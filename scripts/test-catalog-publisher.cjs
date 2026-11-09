@@ -53,6 +53,24 @@ test('newest manifest version wins over release dates; drafts and prereleases ar
     assert.equal(catalog.generatedAt, new Date(NOW).toISOString());
 });
 
+test('a signed previous catalog reuses only the identical published asset', async t => {
+    const f = fixture(t), registered = registry([APP, OTHER]);
+    const litefin = f.release('1.0.0', OTHER, { minimum: '6.0' });
+    const old = await publisher.buildCatalog(registered, [f.release('0.8.2'), litefin], f.download);
+    const previousBytes = publisher.signCatalog(old, keys.privateKey, keys.publicKey).signed;
+    const newer = f.release('0.8.14');
+    const historical = f.release('0.8.1');
+    const download = async asset => {
+        if (asset.name === historical.assets[0].name) throw Object.assign(new Error('HTTP 504'), { code: 'ASSET_TEMPORARY' });
+        assert.equal(asset.name, newer.assets[0].name);
+        return f.download(asset);
+    };
+    const next = await publisher.buildCatalog(registered, [newer, historical, litefin], download, { previousBytes, publicKeyPem: keys.publicKey });
+    assert.deepEqual(next.providers[0].catalog.apps.map(app => [app.version, app.min_tizen_version]), [['0.8.14', '5.0'], ['1.0.0', '6.0']]);
+    const changed = { ...litefin, assets: [{ ...litefin.assets[0], digest: 'sha256:' + '0'.repeat(64) }] };
+    await assert.rejects(publisher.buildCatalog(registered, [newer, changed], f.download, { previousBytes, publicKeyPem: keys.publicKey }), /hash does not match/);
+});
+
 test('all latest registered apps occupy the first synthetic release and preserve actual minimum Tizen', async t => {
     const f = fixture(t);
     const catalog = await publisher.buildCatalog(registry([APP, OTHER]), [f.release('0.8.3'), f.release('1.2.3', OTHER, { minimum: '6.0' })], f.download);
